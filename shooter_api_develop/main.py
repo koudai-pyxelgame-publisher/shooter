@@ -2,13 +2,14 @@ import pyxel
 import math
 import random
 #----------googleapi----------
-import json
 import asyncio
+import json
 
 # ブラウザ環境(Pyodide)かどうかを正確に判定
 try:
     import js
     from pyodide.ffi import to_js
+
     IS_WEB = True
 except ImportError:
     IS_WEB = False
@@ -20,35 +21,40 @@ GAS_URL = "https://script.google.com/macros/s/AKfycbw2garctcHsJyXlxy3j_uN-ltNZeH
 ranking_data = []
 is_loading_ranking = False
 
-# スコア送信（POST）
+
+# スコア送信（POST）の非同期本体
+async def _post_score_async(player_name, score):
+    payload = json.dumps({"name": player_name, "score": score})
+    options = to_js(
+        {
+            "method": "POST",
+            "mode": "no-cors",  # ← これを追加してリダイレクト時のCORSエラーを防止
+            "headers": {"Content-Type": "text/plain"},
+            "body": payload,
+        },
+        dict_converter=js.Object.fromEntries,
+    )
+
+    try:
+        await js.fetch(GAS_URL, options)
+    except Exception as e:
+        print("スコア送信エラー:", e)
+
+
+# 同期関数から呼び出すためのラッパー（既存の呼び出し方を変えずに使えます）
 def send_score_to_sheet(player_name="user_name", score=200):
     if not IS_WEB:
         print("ローカル環境のため送信をスキップしました:", player_name, score)
         return
-    # 送信するデータ
-    payload = json.dumps({
-        "name": player_name,
-        "score": score
-    })
-    # Pythonの辞書をJavaScriptのオブジェクトに安全に変換
-    options = to_js({
-        "method": "POST",
-        "headers": {"Content-Type": "text/plain"},
-        "body": payload
-    }, dict_converter=js.Object.fromEntries)
-    # 非同期で送信
-    try:
-        js.fetch(GAS_URL, options)
-    except TypeError:
-        pass
+    asyncio.create_task(_post_score_async(player_name, score))
+
 
 # ランキング取得（GET）
 async def fetch_ranking_from_sheet():
     global ranking_data, is_loading_ranking
     is_loading_ranking = True
-    
+
     if not IS_WEB:
-        # ローカル環境用のダミーデータ
         ranking_data = [
             {"name": "LOCAL_1", "score": 300},
             {"name": "LOCAL_2", "score": 200},
