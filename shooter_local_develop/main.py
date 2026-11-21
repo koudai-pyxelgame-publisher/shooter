@@ -37,7 +37,7 @@ hp_cost_list={
 }
 hp_max=3
 extra_hp_max=6
-
+healing_probability=10#回復アイテム出現確率
 sound_list={
     "None":(system_sound_ch,0),
     "not":(system_sound_ch,6),
@@ -334,15 +334,14 @@ class Game:
                 #
                 pyxel.play(*sound_list["healing_get"])
                 i.life=0
-                if self.player.life+1 < extra_hp_max : self.player.life+=1
-                #
+                if self.player.life+1 <= extra_hp_max : self.player.life+=1
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
         self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
         #アイテム生成
         self.item_probability=random.randint(1,100)
-        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0 and self.item_probability<=20]) 
+        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0 and self.item_probability<=healing_probability]) 
         
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
@@ -357,7 +356,7 @@ class Game:
             elif 0 < self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"] <= self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"]+self.enemy_probability_list["level_3"]:self.enemy_list.append(enemy(random.randint(0,W), H/4, 1,"level_3"))
 
     def player_create(self):
-        self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=5)#プレイヤー生成
+        self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=hp_max)#プレイヤー生成
         self.score=0
         self.hit_frame=pyxel.frame_count
         self.enemy_probability_list = {
