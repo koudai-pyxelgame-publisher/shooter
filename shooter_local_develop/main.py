@@ -6,7 +6,8 @@ import random
 #----------ゲームの定数----------
 W,H = 160,120#画面の幅、高さ
 player_speed=1.5
-invincible_time=25#無敵フレーム
+invincible_frame=25#無敵フレーム
+freeze_frame=6#発射硬直フレーム
 bullet_speed=2
 enemy_max=10
 character_se_ch=1#ゲームの効果音のチャンネル番号
@@ -25,7 +26,10 @@ enemy_cost_list={
     "level_3":(0,64,0,12,12,11)
             }
 enemy_w,enemy_h=12,12
-
+items_cost={
+    "healing":(0,48,16,8,8,0),
+    "freeze_up":(0,56,16,8,8,0)
+}
 hp_cost_list={
     "empty" :(0,24,16,8,8,11),
     "normal":(0,32,16,8,8,11),
@@ -58,6 +62,22 @@ class base_sprite:
         """更新処理"""
     def draw(self):
         """描画(派生クラスで実装)"""
+
+class item_sprite(base_sprite):
+    def __init__(self,name, x, y, w=8, h=8, life=1):
+        super().__init__(x, y, w, h, life)
+        self.name=name
+        self.vx=0
+        self.vy=1
+    def update(self):
+        """更新処理"""
+        self.x+=self.vx
+        self.y+=self.vy
+        if not( (0<self.x+self.w<W) and (0<self.y<H) ):
+            self.life=0
+    def draw(self):
+        """描画処理"""
+        pyxel.blt(self.x,self.y,*items_cost[self.name])
 
 
 class snow_particle(base_sprite):#スノーパーティクル
@@ -137,7 +157,7 @@ class player_sprite(base_sprite):
     def other_control(self):
         if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_B)):#スペースキー
             self.speed=player_speed*2/3
-            if (pyxel.frame_count-self.bullet_frame_count>6):#前回発射から6フレ
+            if (pyxel.frame_count-self.bullet_frame_count > freeze_frame):#前回発射から発射硬直以上
                 self.bullets.append(bullet_sprite(self.x,self.y,2,6,cost=self.cost,speed=bullet_speed,bomb=self.bomb))
                 self.bullet_frame_count=pyxel.frame_count
         else:
@@ -199,9 +219,6 @@ class bullet_sprite(base_sprite):
         self.speed=speed;self.w=w;self.h=h
         self.x=x+3;self.y=y
         self.bomb=bomb
-        #角度によって生成場所変更
-        #if self.angle == "up"or self.angle=="down": self.x=x+3;self.y=y
-        #else: self.x=x;self.y=y+3
         pyxel.play(*sound_list["bang"])
     def update(self):
         """更新処理"""
@@ -222,7 +239,7 @@ class bullet_sprite(base_sprite):
         #elif self.angle=="left":self.x-=speed
     def life_flag(self):
        #画面内かどうか判定
-       if not( (0<self.x+self.w<W) and (0<self.y<H) ):
+       if not( (-10<self.x+self.w<W+10) and (-10<self.y<H+10) ):
            self.life=0
        #elif (enemy.x < self.x < enemy.x+7) and (enemy.y < self.y < enemy.y+8):
         #   self.life=0;self.bomb.append(bomb_particle(self.x,self.y,4))
@@ -252,6 +269,7 @@ class Game:
         self.snow_list = [#スノーパーティクルを50個生成
         snow_particle(random.randint(0, W), random.randint(0, H)) for _ in range(50)
         ]
+        self.items_list=[]#アイテムリスト
         self.start_menu_call()
         self.hit_frame=pyxel.frame_count
         self.score=0
@@ -299,11 +317,11 @@ class Game:
                     if e.life > 0:pyxel.play(*sound_list["hit"])
             #敵とplayerの当たり判定
             if self.player.life > 0:
-                if self.hit_frame+invincible_time < pyxel.frame_count and (e.x+3 < self.player.x < e.x+8 or e.x+3 < self.player.x+7 < e.x+8) and (e.y < self.player.y < e.y+10 or e.y < self.player.y+7 < e.y+10):
+                if self.hit_frame+invincible_frame < pyxel.frame_count and (e.x+3 < self.player.x < e.x+8 or e.x+3 < self.player.x+7 < e.x+8) and (e.y < self.player.y < e.y+10 or e.y < self.player.y+7 < e.y+10):
                     self.player.life+= -1
                     pyxel.play(*sound_list["hit"],)
                     self.hit_frame=pyxel.frame_count
-                elif self.hit_frame+invincible_time > pyxel.frame_count:
+                elif self.hit_frame+invincible_frame > pyxel.frame_count:
                     self.player.cost="damage"
                 else:
                     self.player.cost="normal"
@@ -311,11 +329,14 @@ class Game:
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
         self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
+        #
+        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0]) 
+        #
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
+        self.items_list[:] = [i for i in self.items_list if i.life > 0]#アイテムの生存判定
         while len(self.enemy_list) > self.enemy_max:#敵が多すぎたら削除
-             self.enemy_list.pop(0)
-        
+             self.enemy_list.pop(0) 
         while len(self.enemy_list) < self.enemy_max:
         #範囲調整リストの範囲に乱数が入っているときに特定の敵を生成する
             self.enemy_probability=random.randint(1,100)
@@ -386,6 +407,7 @@ class Game:
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
+        for i in self.items_list: i.update()
         #プレイヤーのアップデートと爆殺処理
         if self.player.life<=0:
             #lifeがゼロになったら爆殺してリザルト画面へ 
@@ -409,6 +431,7 @@ class Game:
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
         for e in self.enemy_list : e.draw()#敵の描画処理
+        for i in self.items_list : i.draw()#アイテムの描画処理
         self.player.draw()
         #ハート描画:
         for i in range(max_hp):pyxel.blt(5+i*9,3,*hp_cost_list["empty"])
