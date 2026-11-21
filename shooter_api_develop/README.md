@@ -5,10 +5,10 @@ spaceまたはstart-buttonでスタート
 
 アプリ化
 cd C:\Users\kodai\OneDrive\ドキュメント\shooter
-pyxel package shooter_local_develop shooter_local_develop\main.py
+pyxel package shooter_api_develop shooter_api_develop\main.py
 html化
-pyxel app2html shooter_local_develop.pyxapp
+pyxel app2html shooter_api_develop.pyxapp
 
 cd C:\Users\kodai\OneDrive\ドキュメント\shooter
-pyxel package shooter_local_develop shooter_local_develop\main.py
-pyxel app2html shooter_local_develop.pyxapp
+pyxel package shooter_api_develop shooter_api_develop\main.py
+pyxel app2html shooter_api_develop.pyxapp
