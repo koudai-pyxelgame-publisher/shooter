@@ -324,7 +324,7 @@ class Game:
             elif 0 < self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"] <= self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"]+self.enemy_probability_list["level_3"]:self.enemy_list.append(enemy(random.randint(0,W), H/4, 1,"level_3"))
 
     def player_create(self):
-        self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=3)#プレイヤー生成
+        self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=5)#プレイヤー生成
         self.score=0
         self.hit_frame=pyxel.frame_count
         self.enemy_probability_list = {
@@ -381,7 +381,6 @@ class Game:
         self.menu_selected_option="play"
         self.enemy_max=0
 
-
     def play_update(self):#プレイ画面の画面更新処理 パーティクル,弾,敵,プレイヤーの更新　ポーズ判定　
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
@@ -411,10 +410,13 @@ class Game:
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
         for e in self.enemy_list : e.draw()#敵の描画処理
         self.player.draw()
-        #ハート描画
+        #ハート描画:
         for i in range(max_hp):pyxel.blt(5+i*9,3,*hp_cost_list["empty"])
         for i in range(self.player.life):pyxel.blt(5+i*9,3,*hp_cost_list["normal"])
-                
+        if self.player.life > max_hp :#extrahp描画
+            for i in range(self.player.life-max_hp):pyxel.blt(32+i*9,3,*hp_cost_list["extra"])
+
+            
         pyxel.text(5,12,f"SCORE:{self.score}",14)
         pyxel.text(5,20,f"HIGH SCORE:{self.high_score}",14)
     def play_call(self):
