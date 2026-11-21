@@ -35,7 +35,9 @@ hp_cost_list={
     "normal":(0,32,16,8,8,11),
     "extra" :(0,40,16,8,8,11),
 }
-max_hp=3
+hp_max=3
+extra_hp_max=6
+
 sound_list={
     "None":(system_sound_ch,0),
     "not":(system_sound_ch,6),
@@ -43,6 +45,7 @@ sound_list={
     "bang":(character_se_ch,1),
     "boom":(character_se_ch,2),
     "hit":(system_sound_ch,3),
+    "healing_get":(system_sound_ch,8),
     "decide":(system_sound_ch,4),
     "game_over":(system_sound_ch,5)
 }
@@ -319,19 +322,28 @@ class Game:
             if self.player.life > 0:
                 if self.hit_frame+invincible_frame < pyxel.frame_count and (e.x+3 < self.player.x < e.x+8 or e.x+3 < self.player.x+7 < e.x+8) and (e.y < self.player.y < e.y+10 or e.y < self.player.y+7 < e.y+10):
                     self.player.life+= -1
-                    pyxel.play(*sound_list["hit"],)
+                    pyxel.play(*sound_list["hit"])
                     self.hit_frame=pyxel.frame_count
                 elif self.hit_frame+invincible_frame > pyxel.frame_count:
                     self.player.cost="damage"
                 else:
                     self.player.cost="normal"
-    def jadge_life(self):#弾の削除、爆発パーティクル、敵の生成、削除
+            #playerとアイテムの当たり判定
+        for i in self.items_list:
+            if (i.x < self.player.x < i.x+7 or i.x < self.player.x+7 < i.x+7) and (i.y < self.player.y < i.y+7 or i.y < self.player.y+7 < i.y+7):
+                #
+                pyxel.play(*sound_list["healing_get"])
+                i.life=0
+                if self.player.life+1 < extra_hp_max : self.player.life+=1
+                #
+    def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
         self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
-        #
-        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0]) 
-        #
+        #アイテム生成
+        self.item_probability=random.randint(1,100)
+        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0 and self.item_probability<=20]) 
+        
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
         self.items_list[:] = [i for i in self.items_list if i.life > 0]#アイテムの生存判定
@@ -407,7 +419,7 @@ class Game:
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
-        for i in self.items_list: i.update()
+        for i in self.items_list: i.update()#アイテムアップデート
         #プレイヤーのアップデートと爆殺処理
         if self.player.life<=0:
             #lifeがゼロになったら爆殺してリザルト画面へ 
@@ -417,7 +429,9 @@ class Game:
         elif self.player.life > 0: 
             self.player.update()
         else: pass
-        
+        if self.player.life > extra_hp_max :
+            self.player.life = extra_hp_max
+
         self.jadge_life()
         self.jadge_hit()
         if self.score > self.high_score : self.high_score=self.score
@@ -434,10 +448,10 @@ class Game:
         for i in self.items_list : i.draw()#アイテムの描画処理
         self.player.draw()
         #ハート描画:
-        for i in range(max_hp):pyxel.blt(5+i*9,3,*hp_cost_list["empty"])
+        for i in range(hp_max):pyxel.blt(5+i*9,3,*hp_cost_list["empty"])
         for i in range(self.player.life):pyxel.blt(5+i*9,3,*hp_cost_list["normal"])
-        if self.player.life > max_hp :#extrahp描画
-            for i in range(self.player.life-max_hp):pyxel.blt(32+i*9,3,*hp_cost_list["extra"])
+        if self.player.life > hp_max :#extrahp描画
+            for i in range(self.player.life-hp_max):pyxel.blt(32+i*9,3,*hp_cost_list["extra"])
 
             
         pyxel.text(5,12,f"SCORE:{self.score}",14)
