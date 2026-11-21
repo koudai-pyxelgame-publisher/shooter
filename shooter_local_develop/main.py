@@ -59,6 +59,32 @@ class base_sprite:
     def draw(self):
         """描画(派生クラスで実装)"""
 
+
+class snow_particle(base_sprite):#スノーパーティクル
+    def __init__(self, x, y):
+        super().__init__(x, y,1,1)
+        self.vy=random.randint(2,8)/10
+    def update(self):
+        self.x+=self.vx;self.y+=self.vy
+        if self.y > H:self.y=0
+    def draw(self):
+        pyxel.rect(self.x, self.y, 1, 1, 7)
+
+class bomb_particle(base_sprite):#爆発パーティクル
+    def __init__(self, x, y, size,col=10):
+        super().__init__(x, y, size,size)
+        pyxel.play(*sound_list["boom"])
+        self.l_size=size#最終サイズ
+        self.n_size=0#現在サイズ
+        self.col=col#色指定
+    def draw(self):
+        """描画処理"""
+        pyxel.circ(self.x,self.y,self.n_size,self.col)
+    def update(self):
+        """更新処理"""
+        if self.l_size <= self.n_size : self.life=0
+        else:self.n_size+=1
+
 class player_sprite(base_sprite):
     def __init__(self, x, y,speed,bullet,bomb,life):
         """コンストラクタ"""
@@ -201,31 +227,7 @@ class bullet_sprite(base_sprite):
        #elif (enemy.x < self.x < enemy.x+7) and (enemy.y < self.y < enemy.y+8):
         #   self.life=0;self.bomb.append(bomb_particle(self.x,self.y,4))
        #else : self.life=1 
-    
-class snow_particle(base_sprite):#スノーパーティクル
-    def __init__(self, x, y):
-        super().__init__(x, y,1,1)
-        self.vy=random.randint(2,8)/10
-    def update(self):
-        self.x+=self.vx;self.y+=self.vy
-        if self.y > H:self.y=0
-    def draw(self):
-        pyxel.rect(self.x, self.y, 1, 1, 7)
 
-class bomb_particle(base_sprite):#爆発パーティクル
-    def __init__(self, x, y, size,col=10):
-        super().__init__(x, y, size,size)
-        pyxel.play(*sound_list["boom"])
-        self.l_size=size#最終サイズ
-        self.n_size=0#現在サイズ
-        self.col=col#色指定
-    def draw(self):
-        """描画処理"""
-        pyxel.circ(self.x,self.y,self.n_size,self.col)
-    def update(self):
-        """更新処理"""
-        if self.l_size <= self.n_size : self.life=0
-        else:self.n_size+=1
 #------------------------------
 
 class Game:
