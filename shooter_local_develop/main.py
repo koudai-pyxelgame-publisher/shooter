@@ -310,7 +310,7 @@ class Game:
     def jadge_life(self):#弾の削除、爆発パーティクル、敵の生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
-        self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life == 0]) #敵のHPがゼロになった時爆発パーティクル追加
+        self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
         while len(self.enemy_list) > self.enemy_max:#敵が多すぎたら削除
@@ -370,10 +370,10 @@ class Game:
         pyxel.text(10,10,f"HIGH SCORE:{self.high_score}",14)
         self.draw_text(W/2,H/2-24,"SHOOTER",6)
         self.draw_text(W/2,H/2,"PLAY",14)
-        self.draw_text(W/2,H/2+12,"TRANING MODE",14)
+        self.draw_text(W/2,H/2+12,"TRAINING MODE",14)
         self.draw_text(W/2,H/2+24,"COMING SOON",14)
         if self.menu_selected_option == "play" : self.draw_text(W/2,H/2,"PLAY",8)
-        if self.menu_selected_option =="traning_mode" :self.draw_text(W/2,H/2+12,"TRANING MODE",8)
+        if self.menu_selected_option =="traning_mode" :self.draw_text(W/2,H/2+12,"TRAINING MODE",8)
         if self.menu_selected_option == "online_ranking" : self.draw_text(W/2,H/2+24,"COMING SOON",8)
         #pyxel.text(W/2,H/2+10,"©koudai",14)
     def start_menu_call(self):
@@ -441,7 +441,7 @@ class Game:
             self.menu_selected_option = self.menu_next_option
     def pose_draw(self):#ポーズ画面の画面描画処理
         self.play_draw()
-        self.draw_text(W/2,W/2-24,"POSE",6)
+        self.draw_text(W/2,H/2-24,"PAUSE",6)
         self.draw_text(W/2,H/2+12,"RETURN",14)
         self.draw_text(W/2,H/2+24,"ESCAPE",14)
         if self.menu_selected_option == "return" : self.draw_text(W/2,H/2+12,"RETURN",8)
