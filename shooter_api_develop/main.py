@@ -37,7 +37,10 @@ def send_score_to_sheet(player_name="user_name", score=200):
         "body": payload
     }, dict_converter=js.Object.fromEntries)
     # 非同期で送信
-    js.fetch(GAS_URL, options)
+    try:
+        js.fetch(GAS_URL, options)
+    except TypeError:
+        pass
 
 # ランキング取得（GET）
 async def fetch_ranking_from_sheet():
