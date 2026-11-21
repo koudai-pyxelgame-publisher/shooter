@@ -2,9 +2,42 @@ import pyxel
 import math
 import random
 
-#----------googleapi----------
+#----------ゲームの定数----------
+W,H = 160,120#画面の幅、高さ
+player_speed=1.5
+invincible_frame=25#無敵フレーム
+freeze_frame=6#発射硬直フレーム
+bullet_speed=2
+enemy_max=10
+character_se_ch=1#ゲームの効果音のチャンネル番号
+system_sound_ch=0#システムサウンドのチャンネル番号
+player_animations={
+    "normal":(0,24,0,8,8,11),#イメージバンク番号,x,y,幅,高さ,透明扱いの色(ないなら空白)
+    "right" :(0,32,0,8,8,11),
+    "left"  :(0,24,8,8,8,11),
+    "up"    :(0,24,0,8,8,11),
+    "down"  :(0,24,0,8,8,11),
+    "damage":(0,32,8,8,8,11),
+        }
+enemy_cost_list={
+    "level_1":(0,40,0,12,12,11),
+    "level_2":(0,52,0,12,12,11),
+    "level_3":(0,64,0,12,12,11)
+            }
+enemy_w,enemy_h=12,12
 
-
+sound_list={
+    "None":(system_sound_ch,0),
+    "not":(system_sound_ch,6),
+    "select":(system_sound_ch,7),
+    "bang":(character_se_ch,1),
+    "boom":(character_se_ch,2),
+    "hit":(system_sound_ch,3),
+    "healing_get":(system_sound_ch,8),
+    "start":(system_sound_ch,4),
+    "game_over":(system_sound_ch,5)
+}
+#--------------------------------
 #----------スプライト----------
 class base_sprite:
     def __init__(self,x,y,w=8,h=8,life=1):
@@ -305,7 +338,6 @@ class Game:
                 #lifeがゼロになったら爆殺してリザルト画面へ 
                 #ハイスコア更新とハイスコアをサーバーへ
                 if self.score > self.high_score : self.high_score=self.score
-                send_score_to_sheet(player_name="koudai", score=self.high_score)
                 self.bomb.extend([bomb_particle(self.player.x,self.player.y,20,8)])
                 self.player.life+=-1
                 self.screen_status="result" ; pyxel.play(*sound_list["game_over"])
