@@ -5,6 +5,7 @@ import random
 
 #----------ゲームの定数----------
 W,H = 160,120#画面の幅、高さ
+game_frame_count=0
 player_speed=1
 invincible_frame=25#無敵フレーム
 fire_freeze_frame=6#発射硬直フレーム
@@ -45,6 +46,7 @@ sound_list={
     "not":(system_sound_ch,6),
     "select":(system_sound_ch,7),
     "bang":(character_se_ch,1),
+    "dash":(character_se_ch,9,),
     "boom":(character_se_ch,2),
     "hit":(system_sound_ch,3),
     "healing_get":(system_sound_ch,8),
@@ -84,7 +86,6 @@ class item_sprite(base_sprite):
         """描画処理"""
         pyxel.blt(self.x,self.y,*items_cost[self.name])
 
-
 class snow_particle(base_sprite):#スノーパーティクル
     def __init__(self, x, y):
         super().__init__(x, y,1,1)
@@ -109,6 +110,17 @@ class bomb_particle(base_sprite):#爆発パーティクル
         """更新処理"""
         if self.l_size <= self.n_size : self.life=0
         else:self.n_size+=1
+
+class heart_sprite(base_sprite):
+    def __init__(self, x=5, y=3, w=8, h=8,hp=0,cost="normal"):
+        super().__init__(x, y, w, h, life=1)
+        self.player_hp=hp
+        self.cost=cost
+    def draw(self):
+        """描画処理"""
+        pyxel.blt(self.x,self.y,*hp_cost_list[self.cost])
+    def update(self):
+        pass
 
 class player_sprite(base_sprite):
     def __init__(self, x, y,speed,bullet,bomb,life):
@@ -167,18 +179,19 @@ class player_sprite(base_sprite):
             #self.cost="normal"
     def fire_control(self):
         if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_B)):#スペースキー
-            if (pyxel.frame_count > fire_freeze_frame+self.fire_freeze_count):#前回発射から発射硬直以上
+            if (game_frame_count > fire_freeze_frame+self.fire_freeze_count):#前回発射から発射硬直以上
                 self.bullets.append(bullet_sprite(self.x,self.y,2,6,cost=self.cost,speed=bullet_speed,bomb=self.bomb))
-                self.fire_freeze_count=pyxel.frame_count
+                self.fire_freeze_count=game_frame_count
     def dash_control(self):
         if pyxel.btn(pyxel.KEY_B) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A):
-            if (pyxel.frame_count> dash_freeze_frame+self.dash_freeze_count):#ダッシュ
+            if (game_frame_count > dash_freeze_frame+self.dash_freeze_count):#ダッシュ
+                pyxel.play(*sound_list["dash"])
                 self.x+=self.vx*2
                 self.y+=self.vy*2
-                self.dash_freeze_count=pyxel.frame_count
+                self.dash_freeze_count=game_frame_count
             else:
                 pass
-        if self.dash_freeze_count+dash_frame > pyxel.frame_count:#ダッシュ継続時間ならスピードアップのまま
+        if self.dash_freeze_count+dash_frame > game_frame_count:#ダッシュ継続時間ならスピードアップのまま
             self.x+=self.vx*2
             self.y+=self.vy*2
         
@@ -192,7 +205,7 @@ class enemy(base_sprite):
         if self.cost=="level_1":self.level_1_move()
         elif self.cost=="level_2":self.level_2_move()
 
-        self.n_frame=pyxel.frame_count
+        self.n_frame=game_frame_count#下の比較用
         self.a_frame=self.n_frame#左右の周期用フレームカウンター
     def update(self):
         """更新処理"""
@@ -203,7 +216,7 @@ class enemy(base_sprite):
         pyxel.blt(self.x,self.y,*enemy_cost_list[self.cost])
 
     def move_control(self):
-        self.n_frame=pyxel.frame_count
+        self.n_frame=game_frame_count
         if self.cost=="level_1":
             if self.n_frame > self.a_frame+30:
                 self.level_1_move()
@@ -289,8 +302,9 @@ class Game:
         snow_particle(random.randint(0, W), random.randint(0, H)) for _ in range(50)
         ]
         self.items_list=[]#アイテムリスト
+        self.heart_list=[]
         self.start_menu_call()
-        self.hit_frame=pyxel.frame_count
+        self.hit_frame=game_frame_count
         self.score=0
         self. high_score=0
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
@@ -336,11 +350,12 @@ class Game:
                     if e.life > 0:pyxel.play(*sound_list["hit"])
             #敵とplayerの当たり判定
             if self.player.life > 0:
-                if self.hit_frame+invincible_frame < pyxel.frame_count and (e.x+3 < self.player.x < e.x+8 or e.x+3 < self.player.x+7 < e.x+8) and (e.y < self.player.y < e.y+10 or e.y < self.player.y+7 < e.y+10):
+                #当たったフレームと無敵時間足した時<今のフレーム数
+                if self.hit_frame+invincible_frame < game_frame_count and (e.x+3 < self.player.x < e.x+8 or e.x+3 < self.player.x+7 < e.x+8) and (e.y < self.player.y < e.y+10 or e.y < self.player.y+7 < e.y+10):
                     self.player.life+= -1
                     pyxel.play(*sound_list["hit"])
-                    self.hit_frame=pyxel.frame_count
-                elif self.hit_frame+invincible_frame > pyxel.frame_count:
+                    self.hit_frame=game_frame_count
+                elif self.hit_frame+invincible_frame > game_frame_count:
                     self.player.cost="damage"
                 else:
                     self.player.cost="normal"
@@ -374,7 +389,7 @@ class Game:
     def player_create(self):
         self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=hp_max)#プレイヤー生成
         self.score=0
-        self.hit_frame=pyxel.frame_count
+        self.hit_frame=game_frame_count
         self.enemy_probability_list = {
         "level_1": 100,
         "level_2": 0,
@@ -429,12 +444,21 @@ class Game:
         self.menu_selected_option="play"
         self.enemy_max=0
 
-    def play_update(self):#プレイ画面の画面更新処理 パーティクル,弾,敵,プレイヤーの更新　ポーズ判定　
+    def play_update(self):#プレイ画面の画面更新処理 パーティクル,弾,敵,プレイヤーの更新　ポーズ判定
+        global game_frame_count
+        game_frame_count+=1
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
         for i in self.items_list: i.update()#アイテムアップデート
+        self.heart_list=[
+            heart_sprite(x=5+i*9,y=5,cost="empty") for i in range(hp_max)
+            ]+[
+            heart_sprite(x=5+i*9,y=5,cost="normal") for i in range(self.player.life)
+            ]+[
+            heart_sprite(x=5+hp_max*9+i*9,y=5,cost="extra")for i in range(self.player.life-hp_max)
+            ]
         #プレイヤーのアップデートと爆殺処理
         if self.player.life<=0:
             #lifeがゼロになったら爆殺してリザルト画面へ 
@@ -454,25 +478,21 @@ class Game:
             pyxel.play(*sound_list["decide"])
             self.pose_call()
         if 50 <= self.score <= 100: self.enemy_probability_list["level_1"]=100-self.score ;self.enemy_probability_list["level_2"]=self.score
-        pass
     def play_draw(self):#プレイ画面の描画処理
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
         for e in self.enemy_list : e.draw()#敵の描画処理
         for i in self.items_list : i.draw()#アイテムの描画処理
+        for h in self.heart_list : h.draw()
         self.player.draw()
-        #ハート描画:
-        for i in range(hp_max):pyxel.blt(5+i*9,3,*hp_cost_list["empty"])
-        for i in range(self.player.life):pyxel.blt(5+i*9,3,*hp_cost_list["normal"])
-        if self.player.life > hp_max :#extrahp描画
-            for i in range(self.player.life-hp_max):pyxel.blt(32+i*9,3,*hp_cost_list["extra"])
         pyxel.rectb(5 , 15 ,dash_freeze_frame , 8 , 10)
-        pyxel.rect(5 , 15 , dash_freeze_frame-(pyxel.frame_count-self.player.dash_freeze_count) , 8 , 10)
+        pyxel.rect(5 , 15 , dash_freeze_frame-(game_frame_count-self.player.dash_freeze_count) , 8 , 10)
         pyxel.text(5,30,f"SCORE:{self.score}",14)
         pyxel.text(5,38,f"HIGH SCORE:{self.high_score}",14)
     def play_call(self):
         self.screen_status = "play"
+        self.heart_list=[heart_sprite(cost="normal") for _ in range(hp_max)]
         self.player_create()
         self.enemy_max=enemy_max
 
