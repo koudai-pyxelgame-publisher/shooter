@@ -40,6 +40,7 @@ hp_cost_list={
 }
 hp_max=3
 extra_hp_max=6
+extra_heart_time=200#エクストラHPの寿命(フレーム)
 healing_probability=10#回復アイテム出現確率
 sound_list={
     "None":(system_sound_ch,0),
@@ -49,6 +50,7 @@ sound_list={
     "dash":(character_se_ch,9,),
     "boom":(character_se_ch,2),
     "hit":(system_sound_ch,3),
+    "del_extra":(system_sound_ch,10),
     "healing_get":(system_sound_ch,8),
     "decide":(system_sound_ch,4),
     "game_over":(system_sound_ch,5)
@@ -303,6 +305,7 @@ class Game:
         ]
         self.items_list=[]#アイテムリスト
         self.heart_list=[]
+        self.heart_del_frame=0
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
@@ -314,6 +317,7 @@ class Game:
             self.start_menu_update()
         elif self.screen_status == "play":
             self.play_update()
+            #print(self.player.life)
         elif self.screen_status =="traning":
             self.traning_update()
         elif self.screen_status =="pose":
@@ -322,6 +326,7 @@ class Game:
             self.ranking_update()
         elif self.screen_status=="result":
             self.result_update()
+        
     def draw(self):
         """描画処理"""
         pyxel.cls(0)#clear screen(画面の内容を消す)
@@ -366,6 +371,7 @@ class Game:
                 pyxel.play(*sound_list["healing_get"])
                 i.life=0
                 if self.player.life+1 <= extra_hp_max : self.player.life+=1
+                self.heart_del_frame = game_frame_count
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
@@ -452,6 +458,12 @@ class Game:
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
         for i in self.items_list: i.update()#アイテムアップデート
+        
+        if self.player.life > hp_max:
+            if game_frame_count > self.heart_del_frame + extra_heart_time:
+                pyxel.play(*sound_list["del_extra"])
+                self.player.life -=1
+                self.heart_del_frame = game_frame_count
         self.heart_list=[
             heart_sprite(x=5+i*9,y=5,cost="empty") for i in range(hp_max)
             ]+[
