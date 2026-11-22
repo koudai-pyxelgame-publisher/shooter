@@ -5,9 +5,11 @@ import random
 
 #----------ゲームの定数----------
 W,H = 160,120#画面の幅、高さ
-player_speed=1.5
+player_speed=1
 invincible_frame=25#無敵フレーム
-freeze_frame=6#発射硬直フレーム
+fire_freeze_frame=6#発射硬直フレーム
+dash_freeze_frame=45#ダッシュ硬直フレーム
+dash_frame=5#ダッシュ継続フレーム
 bullet_speed=2
 enemy_max=10
 character_se_ch=1#ゲームの効果音のチャンネル番号
@@ -115,33 +117,39 @@ class player_sprite(base_sprite):
         self.cost="normal"
         self.speed=speed
         self.bullets=bullet
-        self.bullet_frame_count=0
+        self.fire_freeze_count=0
+        self.dash_freeze_count=0
         self.bomb=bomb
         #コスチューム用意
         self.cost_list=player_animations
     def update(self):
         """更新処理"""
         self.move_control()
-        self.other_control()
+        self.fire_control()
+        self.dash_control()
         self.x+=self.vx;self.y+=self.vy
     def draw(self):
         """描画処理"""
         pyxel.blt(self.x,self.y,*self.cost_list[self.cost])
     def move_control(self):
-        if ( (pyxel.btn(pyxel.KEY_A) and not(pyxel.btn(pyxel.KEY_D) ) ) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) ) and 0<self.x+(self.w/2):
+        if ( (pyxel.btn(pyxel.KEY_A) and (pyxel.btn(pyxel.KEY_D) ) ) ) or ( pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) and pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) ) :
+            self.vx=0
+        elif ( (pyxel.btn(pyxel.KEY_A) and not(pyxel.btn(pyxel.KEY_D) ) ) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_LEFT) ) and 0<self.x+(self.w/2):
             if not self.cost=="damage":self.cost="left"
             self.vx=-1*self.speed
-        elif ( pyxel.btn(pyxel.KEY_D) and not pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) ) and (self.x+self.w)-(self.w/2) < W:
+        elif ( pyxel.btn(pyxel.KEY_D) and not pyxel.btn(pyxel.KEY_A) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_RIGHT) ) and self.x+self.w/2 < W:
             if not self.cost=="damage":self.cost="right"
             self.vx=self.speed
         else:
             if not self.cost=="damage":self.cost="normal"
             self.vx=0
         
-        if ( pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP) ) and 0<self.y+(self.h/2):
+        if ( (pyxel.btn(pyxel.KEY_W) and (pyxel.btn(pyxel.KEY_S) ) ) ) or ( pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP) and pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN) ) :
+            self.vy=0    
+        elif ( pyxel.btn(pyxel.KEY_W) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_UP) ) and 0<self.y+(self.h/2):
             if not(self.cost=="right" or self.cost=="left" or self.cost=="damage"):self.cost="up"
             self.vy=-1*self.speed
-        elif ( pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN) ) and (self.y+self.h)-(self.w/2) < H:
+        elif ( pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN) ) and (self.y+self.h/2) < H:
             if not(self.cost=="right" or self.cost=="left" or self.cost=="damage"):self.cost="down"
             self.vy=self.speed
         else:
@@ -157,15 +165,23 @@ class player_sprite(base_sprite):
                 pyxel.btn(pyxel.KEY_S) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_DPAD_DOWN) ):#ニュートラル
             pass
             #self.cost="normal"
-    def other_control(self):
+    def fire_control(self):
         if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_B)):#スペースキー
-            self.speed=player_speed*2/3
-            if (pyxel.frame_count-self.bullet_frame_count > freeze_frame):#前回発射から発射硬直以上
+            if (pyxel.frame_count > fire_freeze_frame+self.fire_freeze_count):#前回発射から発射硬直以上
                 self.bullets.append(bullet_sprite(self.x,self.y,2,6,cost=self.cost,speed=bullet_speed,bomb=self.bomb))
-                self.bullet_frame_count=pyxel.frame_count
-        else:
-            self.speed=player_speed
-
+                self.fire_freeze_count=pyxel.frame_count
+    def dash_control(self):
+        if pyxel.btn(pyxel.KEY_B) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A):
+            if (pyxel.frame_count> dash_freeze_frame+self.dash_freeze_count):#ダッシュ
+                self.x+=self.vx*2
+                self.y+=self.vy*2
+                self.dash_freeze_count=pyxel.frame_count
+            else:
+                pass
+        if self.dash_freeze_count+dash_frame > pyxel.frame_count:#ダッシュ継続時間ならスピードアップのまま
+            self.x+=self.vx*2
+            self.y+=self.vy*2
+        
 class enemy(base_sprite):
     def __init__(self, x, y,life,level="level_1"):
         """コンストラクタ"""
@@ -451,10 +467,10 @@ class Game:
         for i in range(self.player.life):pyxel.blt(5+i*9,3,*hp_cost_list["normal"])
         if self.player.life > hp_max :#extrahp描画
             for i in range(self.player.life-hp_max):pyxel.blt(32+i*9,3,*hp_cost_list["extra"])
-
-            
-        pyxel.text(5,12,f"SCORE:{self.score}",14)
-        pyxel.text(5,20,f"HIGH SCORE:{self.high_score}",14)
+        pyxel.rectb(5 , 15 ,dash_freeze_frame , 8 , 10)
+        pyxel.rect(5 , 15 , dash_freeze_frame-(pyxel.frame_count-self.player.dash_freeze_count) , 8 , 10)
+        pyxel.text(5,30,f"SCORE:{self.score}",14)
+        pyxel.text(5,38,f"HIGH SCORE:{self.high_score}",14)
     def play_call(self):
         self.screen_status = "play"
         self.player_create()
