@@ -797,14 +797,15 @@ class Game:
     def result_call(self):
         self.screen_status="result"
         pyxel.play(*sound_list["game_over"])
-    def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
-        pyxel.text (x-2*len(text) , y-3, text , col )
         #サーバーへ
         if self.score==self.high_score:send_score_to_sheet(player_name="user_name", score=self.high_score)
         #-----セーブ-----
         save_data = self.high_score
         window.localStorage.setItem("user_name", save_data)
         #---------------
+
+    def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
+        pyxel.text (x-2*len(text) , y-3, text , col )
 
 def main():
     """メイン処理"""

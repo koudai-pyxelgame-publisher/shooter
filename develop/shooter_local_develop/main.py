@@ -718,10 +718,10 @@ class Game:
         self.draw_text(W/2,H/2+10,(f"HIGH SCORE:{self.high_score}"),14)
     def result_call(self):
         self.screen_status="result"
+        #サーバーへ送信後セーブ
         pyxel.play(*sound_list["game_over"])
     def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
         pyxel.text (x-2*len(text) , y-3, text , col )
-        #サーバーへ送った後セーブ
 
 def main():
     """メイン処理"""
