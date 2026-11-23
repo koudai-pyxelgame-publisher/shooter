@@ -282,7 +282,6 @@ class enemy(base_sprite):
         elif self.cost=="level_3":
             self.level_3_move()
         else: self.level_0_move()
-        self.enemy_control_base()
 
     def enemy_control_base(self):#画面外防止
         if 0>self.x+self.vx:self.vx=1#左に行きすぎたら強制的に右へ
@@ -292,6 +291,7 @@ class enemy(base_sprite):
     def level_0_move(self):
         self.vx,self.vy=0,0
     def level_1_move(self):
+        self.enemy_control_base()
         if game_frame_count > self.a_frame+30:
             self.trandition=random.randint(0,1)
             if self.trandition == 0:
@@ -302,25 +302,26 @@ class enemy(base_sprite):
                 self.vy=random.uniform(-2,2)
             self.a_frame = game_frame_count
     def level_2_move(self):
+        self.enemy_control_base()
         if game_frame_count > self.a_frame+30:
             self.vx=random.uniform(-1.5,1.5)
             self.vy=random.uniform(-1.5,1.5)
             self.a_frame = game_frame_count
     def level_3_move(self):
-        self.speed=8#速度
+        self.speed=6#速度
         self.move_r=25#半径
-        if game_frame_count > self.a_frame+36:
-            self.trandition=random.randint(1,8)#1左上,2右上,3左下,4右下,5上左,6上右,7下左,8下右
-            
+        
+        if game_frame_count >= self.a_frame+31:
+            self.trandition=random.randint(1,8)#1(3時→12時→9時),2(9時→12時→3時),3(3時→6時→9時),4(9時→6時→3時),5(6時→9時→12時),6(6時→3時→12時),7(12時→9時→6時),8(12時→3時→6時)
             if 0>self.x:self.trandition=4#左に行きすぎたら強制的に右へ
-            elif self.x> W:self.trandition=3#上の逆
-            if 0 > self.y:self.trandition=8#上に行きすぎたら強制的に下へ
+            elif self.x> W:self.trandition=1#上の逆
+            elif 0 > self.y:self.trandition=8#上に行きすぎたら強制的に下へ
             elif self.y > H:self.trandition=6#上の逆
-            
+
             if self.trandition==1 or self.trandition==3 : self.angle=0 ; self.center_x=self.x-self.move_r ; self.center_y=self.y#中心を左側へ
             elif self.trandition==2 or self.trandition==4 : self.angle=0 ; self.center_x=self.x+self.move_r ; self.center_y=self.y#中心を右側へ
-            elif self.trandition==5 or self.trandition==7 : self.angle=0 ; self.center_x=self.x ; self.center_y=self.y-self.move_r#中心を上側へ
-            elif self.trandition==6 or self.trandition==8 : self.angle=0 ; self.center_x=self.x;self.center_y=self.y+self.move_r#中心を下側へ
+            elif self.trandition==5 or self.trandition==6 : self.angle=0 ; self.center_x=self.x ; self.center_y=self.y-self.move_r#中心を上側へ
+            elif self.trandition==7 or self.trandition==8 : self.angle=0 ; self.center_x=self.x;self.center_y=self.y+self.move_r#中心を下側へ
             self.a_frame=game_frame_count
         else:
             if self.trandition == 1:
@@ -352,12 +353,12 @@ class enemy(base_sprite):
                 self.angle+=self.speed
                 self.rad = math.radians(self.angle)
                 self.x = self.center_x + math.sin(self.rad) * self.move_r
-                self.y = self.center_y + math.cos(self.rad) * -self.move_r
+                self.y = self.center_y + math.cos(self.rad) * self.move_r
             elif self.trandition == 7:
                 self.angle+=self.speed
                 self.rad = math.radians(self.angle)
                 self.x = self.center_x + math.sin(self.rad) * -self.move_r
-                self.y = self.center_y + math.cos(self.rad) * self.move_r
+                self.y = self.center_y + math.cos(self.rad) * -self.move_r
             elif self.trandition == 8:
                 self.angle-=self.speed
                 self.rad = math.radians(self.angle)
