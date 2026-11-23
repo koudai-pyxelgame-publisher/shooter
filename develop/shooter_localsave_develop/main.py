@@ -410,7 +410,7 @@ class Game:
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
         # ロード------
         load_data = window.localStorage.getItem("user_name")
-        if load_data==None:load_data=0
+        self.high_score = int(load_data) if load_data else 0
         #-------------
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
@@ -429,7 +429,6 @@ class Game:
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
-        self. high_score=load_data
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
     def update(self):
         """更新処理"""
