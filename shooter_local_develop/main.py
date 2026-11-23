@@ -22,7 +22,7 @@ enemy_probability_list={
         },
     "stage_2":{
         "level_1":50,
-        "level_2":550,
+        "level_2":50,
         "level_3":0
         },
     "stage_3":{
@@ -608,7 +608,7 @@ class Game:
             #lifeがゼロになったら爆殺してリザルト画面へ 
             self.bomb.extend([bomb_particle(self.player.x,self.player.y,20,8)])
             self.player.life+=-1
-            self.screen_status="result" ; pyxel.play(*sound_list["game_over"])
+            self.result_call()
         elif self.player.life > 0: 
             self.player.update()
         else: pass
@@ -714,7 +714,9 @@ class Game:
         self.draw_text(W/2,H/2-14,"GAME OVER",14)
         self.draw_text(W/2,H/2,f"SCORE:{self.score}",14)
         self.draw_text(W/2,H/2+10,(f"HIGH SCORE:{self.high_score}"),14)
-
+    def result_call(self):
+        self.screen_status="result"
+        pyxel.play(*sound_list["game_over"])
     def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
         pyxel.text (x-2*len(text) , y-3, text , col )
 
