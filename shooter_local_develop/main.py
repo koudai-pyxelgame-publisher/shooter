@@ -9,10 +9,38 @@ game_frame_count=0
 player_speed=1
 invincible_frame=25#無敵フレーム
 fire_freeze_frame=6#発射硬直フレーム
-dash_freeze_frame=45#ダッシュ硬直フレーム
+dash_freeze_frame=30#ダッシュ硬直フレーム
 dash_frame=5#ダッシュ継続フレーム
 bullet_speed=2
 enemy_max=10
+#敵の確率
+enemy_probability_list={
+    "stage_1":{
+        "level_1":100,
+        "level_2":0,
+        "level_3":0
+        },
+    "stage_2":{
+        "level_1":50,
+        "level_2":550,
+        "level_3":0
+        },
+    "stage_3":{
+        "level_1":0,
+        "level_2":100,
+        "level_3":0
+        },
+    "stage_4":{
+        "level_1":0,
+        "level_2":50,
+        "level_3":50
+        },
+    "stage_5":{
+        "level_1":0,
+        "level_2":0,
+        "level_3":100
+        }
+        }
 character_se_ch=1#ゲームの効果音のチャンネル番号
 system_sound_ch=0#システムサウンドのチャンネル番号
 player_animations={
@@ -23,6 +51,10 @@ player_animations={
     "down"  :(0,24,0,8,8,11),
     "damage":(0,32,8,8,8,11),
         }
+character_particles={
+    "plus":(0,8,16,8,8,0),
+    "minus":(0,16,16,8,8,0),
+}
 enemy_cost_list={
     "level_1":(0,40,0,12,12,11),
     "level_2":(0,52,0,12,12,11),
@@ -113,6 +145,31 @@ class bomb_particle(base_sprite):#爆発パーティクル
         if self.l_size <= self.n_size : self.life=0
         else:self.n_size+=1
 
+class character_particle(base_sprite):
+    def __init__(self,particle_name="plus" , character=object, w=8, h=8, life=1):
+        super().__init__(character.x, character.y+8, w, h, life)
+        self.name=particle_name
+        self.character=character
+        if self.name=="plus":self.gap=8
+        if self.name=="minus":self.gap=-8
+        self.blt_x = self.character.x#描画位置
+        self.blt_y = self.character.y + self.gap
+        self.x = 0
+        self.y = self.gap #キャラクターの位置からの相対座標
+    def draw(self):
+        pyxel.blt(self.blt_x,self.blt_y,*character_particles[self.name])
+    def update(self):
+        if self.name =="plus":
+            if -5 >= self.y : self.life=0
+            else:self.y -= 1.5
+            self.blt_x = self.character.x+self.x #描画位置
+            self.blt_y = self.character.y+self.y
+        if self.name =="minus":
+            if 5 <= self.y : self.life=0
+            else:self.y += 1.5
+            self.blt_x = self.character.x+self.x #描画位置
+            self.blt_y = self.character.y+self.y
+    
 class heart_sprite(base_sprite):
     def __init__(self, x=5, y=3, w=8, h=8,hp=0,cost="normal"):
         super().__init__(x, y, w, h, life=1)
@@ -180,7 +237,7 @@ class player_sprite(base_sprite):
             pass
             #self.cost="normal"
     def fire_control(self):
-        if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_B)):#スペースキー
+        if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_X)):#スペースキー
             if (game_frame_count > fire_freeze_frame+self.fire_freeze_count):#前回発射から発射硬直以上
                 self.bullets.append(bullet_sprite(self.x,self.y,2,6,cost=self.cost,speed=bullet_speed,bomb=self.bomb))
                 self.fire_freeze_count=game_frame_count
@@ -203,6 +260,10 @@ class enemy(base_sprite):
         super().__init__(x, y,enemy_w,enemy_h,life)#親クラスのコンストラクタ(座標二つ,幅と高さ)
         self.vx=0
         self.vy=0
+        self.angle=0
+        self.center_x=x+5
+        self.center_y=y+5
+        self.trandition=1
         self.cost=level
         self.a_frame=-30#前回の移動初めのフレ
     def update(self):
@@ -218,6 +279,9 @@ class enemy(base_sprite):
             self.level_1_move()
         elif self.cost=="level_2":
             self.level_2_move()
+        elif self.cost=="level_3":
+            self.level_3_move()
+        else: self.level_0_move()
         self.enemy_control_base()
 
     def enemy_control_base(self):#画面外防止
@@ -242,7 +306,63 @@ class enemy(base_sprite):
             self.vx=random.uniform(-1.5,1.5)
             self.vy=random.uniform(-1.5,1.5)
             self.a_frame = game_frame_count
-        
+    def level_3_move(self):
+        self.speed=7#速度
+        self.move_r=15#半径
+        if game_frame_count > self.a_frame+36:
+            self.trandition=random.randint(1,8)#1左上,2右上,3左下,4右下,5上左,6上右,7下左,8下右
+            
+            if 0>self.x:self.trandition=2#左に行きすぎたら強制的に右へ
+            elif self.x> W:self.trandition=4#上の逆
+            if 0 > self.y:self.trandition=8#上に行きすぎたら強制的に下へ
+            elif self.y > H:self.trandition=6#上の逆
+            
+            if self.trandition==1 or self.trandition==3 : self.angle=0 ; self.center_x=self.x-self.move_r ; self.center_y=self.y#中心を左側へ
+            elif self.trandition==2 or self.trandition==4 : self.angle=0 ; self.center_x=self.x+self.move_r ; self.center_y=self.y#中心を右側へ
+            elif self.trandition==5 or self.trandition==7 : self.angle=0 ; self.center_x=self.x ; self.center_y=self.y-self.move_r#中心を上側へ
+            elif self.trandition==6 or self.trandition==8 : self.angle=0 ; self.center_x=self.x;self.center_y=self.y+self.move_r#中心を下側へ
+            self.a_frame=game_frame_count
+        else:
+            if self.trandition == 1:
+                self.angle-=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.cos(self.rad) * self.move_r
+                self.y = self.center_y + math.sin(self.rad) * self.move_r
+            elif self.trandition == 2:
+                self.angle+=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.cos(self.rad) * -self.move_r
+                self.y = self.center_y + math.sin(self.rad) * -self.move_r
+            elif self.trandition == 3:
+                self.angle-=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.cos(self.rad) * self.move_r
+                self.y = self.center_y + math.sin(self.rad) * -self.move_r
+            elif self.trandition == 4:
+                self.angle+=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.cos(self.rad) * -self.move_r
+                self.y = self.center_y + math.sin(self.rad) * self.move_r
+            elif self.trandition == 5:
+                self.angle-=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.sin(self.rad) * self.move_r
+                self.y = self.center_y + math.cos(self.rad) * self.move_r
+            elif self.trandition == 6:
+                self.angle+=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.sin(self.rad) * self.move_r
+                self.y = self.center_y + math.cos(self.rad) * -self.move_r
+            elif self.trandition == 7:
+                self.angle+=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.sin(self.rad) * -self.move_r
+                self.y = self.center_y + math.cos(self.rad) * self.move_r
+            elif self.trandition == 8:
+                self.angle-=self.speed
+                self.rad = math.radians(self.angle)
+                self.x = self.center_x + math.sin(self.rad) * -self.move_r
+                self.y = self.center_y + math.cos(self.rad) * -self.move_r
 
 class bullet_sprite(base_sprite):
     def __init__(self, x, y,w=2,h=6,cost="normal",speed=1,bomb=[]):
@@ -288,12 +408,6 @@ class Game:
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
-        #敵の確率
-        self.enemy_probability_list={
-            "level_1":100,
-            "level_2":0,
-            "level_3":0
-        }
         self.enemy_list=[
             enemy(random.randint(0,W),H/4,1)for _ in range(10)
         ]#敵リスト
@@ -303,7 +417,9 @@ class Game:
         ]
         self.items_list=[]#アイテムリスト
         self.heart_list=[]
+        self.player_particles_list=[]#パーティクルリスト
         self.heart_del_frame=0
+        self.now_stage="stage_1"
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
@@ -323,8 +439,7 @@ class Game:
         elif self.screen_status == "ranking":
             self.ranking_update()
         elif self.screen_status=="result":
-            self.result_update()
-        
+            self.result_update()  
     def draw(self):
         """描画処理"""
         pyxel.cls(0)#clear screen(画面の内容を消す)
@@ -364,12 +479,13 @@ class Game:
                     self.player.cost="normal"
             #playerとアイテムの当たり判定
         for i in self.items_list:
-            if (i.x < self.player.x < i.x+7 or i.x < self.player.x+7 < i.x+7) and (i.y < self.player.y < i.y+7 or i.y < self.player.y+7 < i.y+7):
-                #
-                pyxel.play(*sound_list["healing_get"])
+            if i.name =="healing" and (i.x < self.player.x < i.x+7 or i.x < self.player.x+7 < i.x+7) and (i.y < self.player.y < i.y+7 or i.y < self.player.y+7 < i.y+7):
                 i.life=0
+                pyxel.play(*sound_list["healing_get"])
+                self.player_particles_list.extend([character_particle("plus",self.player)])
                 if self.player.life+1 <= extra_hp_max : self.player.life+=1
                 self.heart_del_frame = game_frame_count
+
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
@@ -381,24 +497,27 @@ class Game:
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
         self.items_list[:] = [i for i in self.items_list if i.life > 0]#アイテムの生存判定
+        self.player_particles_list[:] = [p for p in self.player_particles_list if p.life > 0]
         while len(self.enemy_list) > self.enemy_max:#敵が多すぎたら削除
              self.enemy_list.pop(0) 
         while len(self.enemy_list) < self.enemy_max:
-        #範囲調整リストの範囲に乱数が入っているときに特定の敵を生成する
-            self.enemy_probability=random.randint(1,100)
-            if 0 < self.enemy_probability <= self.enemy_probability_list["level_1"]:self.enemy_list.append(enemy(random.randint(0,W), H/4, 1,"level_1"))
-            elif self.enemy_probability_list["level_1"] < self.enemy_probability <= self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"]:self.enemy_list.append(enemy(random.randint(0,W), H/4, 1,"level_2"))
-            elif 0 < self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"] <= self.enemy_probability_list["level_1"]+self.enemy_probability_list["level_2"]+self.enemy_probability_list["level_3"]:self.enemy_list.append(enemy(random.randint(0,W), H/4, 1,"level_3"))
-
+            # 現在のステージの確率データを取得する
+            prob = enemy_probability_list[self.now_stage]
+            p1 = prob["level_1"]
+            p2 = p1 + prob["level_2"]
+            p3 = p2 + prob["level_3"]
+            self.enemy_probability = random.randint(1, 100)
+            if 0 < self.enemy_probability <= p1:
+                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_1"))
+            elif p1 < self.enemy_probability <= p2:
+                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_2"))
+            elif p2 < self.enemy_probability <= p3:
+                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_3"))
     def player_create(self):
         self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=hp_max)#プレイヤー生成
         self.score=0
         self.hit_frame=game_frame_count
-        self.enemy_probability_list = {
-        "level_1": 100,
-        "level_2": 0,
-        "level_3": 0
-        }
+
 
     def start_menu_update(self):#スタートメニューの画面更新処理
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
@@ -456,10 +575,17 @@ class Game:
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
         for i in self.items_list: i.update()#アイテムアップデート
+        for p in self.player_particles_list: p.update()
+        if  0 <= self.score < 50:self.now_stage="stage_1"
+        elif 50 <= self.score < 100:self.now_stage="stage_2"
+        elif 100 <= self.score < 150:self.now_stage="stage_3"
+        elif 150 <= self.score < 200:self.now_stage="stage_4"
+        elif 200 <= self.score:self.now_stage="stage_5"
         #ハートの削除判定
         if self.player.life > hp_max:
             if game_frame_count > self.heart_del_frame + extra_heart_time:
                 pyxel.play(*sound_list["del_extra"])
+                self.player_particles_list.extend([character_particle("minus",self.player)])
                 self.player.life -= 1
                 self.heart_del_frame = game_frame_count
         #ハートリストの更新
@@ -496,7 +622,6 @@ class Game:
         if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START):#ポーズメニュー
             pyxel.play(*sound_list["decide"])
             self.pose_call()
-        if 50 <= self.score <= 100: self.enemy_probability_list["level_1"]=100-self.score ;self.enemy_probability_list["level_2"]=self.score
     def play_draw(self):#プレイ画面の描画処理
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
@@ -504,6 +629,7 @@ class Game:
         for e in self.enemy_list : e.draw()#敵の描画処理
         for i in self.items_list : i.draw()#アイテムの描画処理
         for h in self.heart_list : h.draw()
+        for p in self.player_particles_list : p.draw()#パーティクル描画
         self.player.draw()
         pyxel.rectb(5 , 15 ,dash_freeze_frame , 8 , 10)
         pyxel.rect(5 , 15 , dash_freeze_frame-(game_frame_count-self.player.dash_freeze_count) , 8 , 10)
