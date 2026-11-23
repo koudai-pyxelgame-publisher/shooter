@@ -75,10 +75,7 @@ async def fetch_ranking_from_sheet():
         ranking_data = []
     finally:
         is_loading_ranking = False
-
 #send_score_to_sheet(player_name="koudai", score=self.high_score)
-#-----------------------------
-
 #----------ゲームの定数----------
 W,H = 160,120#画面の幅、高さ
 game_frame_count=0
@@ -112,9 +109,9 @@ enemy_probability_list={
         "level_3":50
         },
     "stage_5":{
-        "level_1":0,
-        "level_2":0,
-        "level_3":100
+        "level_1":20,
+        "level_2":50,
+        "level_3":30
         }
         }
 character_se_ch=1#ゲームの効果音のチャンネル番号
@@ -383,13 +380,13 @@ class enemy(base_sprite):
             self.vy=random.uniform(-1.5,1.5)
             self.a_frame = game_frame_count
     def level_3_move(self):
-        self.speed=7#速度
-        self.move_r=15#半径
+        self.speed=8#速度
+        self.move_r=25#半径
         if game_frame_count > self.a_frame+36:
             self.trandition=random.randint(1,8)#1左上,2右上,3左下,4右下,5上左,6上右,7下左,8下右
             
-            if 0>self.x:self.trandition=2#左に行きすぎたら強制的に右へ
-            elif self.x> W:self.trandition=4#上の逆
+            if 0>self.x:self.trandition=4#左に行きすぎたら強制的に右へ
+            elif self.x> W:self.trandition=3#上の逆
             if 0 > self.y:self.trandition=8#上に行きすぎたら強制的に下へ
             elif self.y > H:self.trandition=6#上の逆
             
@@ -503,6 +500,7 @@ class Game:
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
+        self. high_score=0
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
     def update(self):
         """更新処理"""
@@ -558,12 +556,14 @@ class Game:
                     self.player.cost="normal"
             #playerとアイテムの当たり判定
         for i in self.items_list:
-            if i.name =="healing" and (i.x < self.player.x < i.x+7 or i.x < self.player.x+7 < i.x+7) and (i.y < self.player.y < i.y+7 or i.y < self.player.y+7 < i.y+7):
+            if (i.x < self.player.x < i.x+7 or i.x < self.player.x+7 < i.x+7) and (i.y < self.player.y < i.y+7 or i.y < self.player.y+7 < i.y+7):
                 i.life=0
-                pyxel.play(*sound_list["healing_get"])
-                self.player_particles_list.extend([character_particle("plus",self.player)])
-                if self.player.life+1 <= extra_hp_max : self.player.life+=1
-                self.heart_del_frame = game_frame_count
+                if i.name=="healing":
+                    pyxel.play(*sound_list["healing_get"])
+                    #次回アプデで追加
+                    # self.player_particles_list.extend([character_particle("plus",self.player)])
+                    if self.player.life < extra_hp_max : self.player.life+=1
+                    self.heart_del_frame = game_frame_count
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
@@ -663,7 +663,8 @@ class Game:
         if self.player.life > hp_max:
             if game_frame_count > self.heart_del_frame + extra_heart_time:
                 pyxel.play(*sound_list["del_extra"])
-                self.player_particles_list.extend([character_particle("minus",self.player)])
+                #次回アプデで追加
+                #self.player_particles_list.extend([character_particle("minus",self.player)])
                 self.player.life -= 1
                 self.heart_del_frame = game_frame_count
         #ハートリストの更新
@@ -780,6 +781,7 @@ class Game:
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.enemy_list: e.update()#敵更新処理
+
         self.jadge_life()
         if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START) :
             pyxel.play(*sound_list["decide"])
@@ -793,17 +795,16 @@ class Game:
         self.draw_text(W/2,H/2,f"SCORE:{self.score}",14)
         self.draw_text(W/2,H/2+10,(f"HIGH SCORE:{self.high_score}"),14)
     def result_call(self):
-        self.screen_status="result" ; pyxel.play(*sound_list["game_over"])
+        self.screen_status="result"
+        pyxel.play(*sound_list["game_over"])
+    def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
+        pyxel.text (x-2*len(text) , y-3, text , col )
         #サーバーへ
         if self.score==self.high_score:send_score_to_sheet(player_name="user_name", score=self.high_score)
         #-----セーブ-----
         save_data = self.high_score
         window.localStorage.setItem("user_name", save_data)
         #---------------
-
-
-    def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
-        pyxel.text (x-2*len(text) , y-3, text , col )
 
 def main():
     """メイン処理"""
