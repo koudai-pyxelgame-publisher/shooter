@@ -485,7 +485,6 @@ class Game:
                 self.player_particles_list.extend([character_particle("plus",self.player)])
                 if self.player.life+1 <= extra_hp_max : self.player.life+=1
                 self.heart_del_frame = game_frame_count
-
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
@@ -679,6 +678,7 @@ class Game:
         self.play_draw()
     def traning_call(self):
         self.enemy_max=0
+        self.items_list=[]
         self.screen_status = "traning"
         self.player_create()
         self.enemy_max=0
