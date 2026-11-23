@@ -4,7 +4,7 @@ spaceまたはb-buttonで弾を発射
 spaceまたはstart-buttonでスタート
 
 アプリ化
-cd C:\Users\kodai\OneDrive\ドキュメント\shooter
+cd C:\Users\kodai\OneDrive\ドキュメント\shooter\develop
 pyxel package shooter_api_develop shooter_api_develop\main.py
 html化
 pyxel app2html shooter_api_develop.pyxapp
