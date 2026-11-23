@@ -18,7 +18,7 @@ except ImportError:
     IS_WEB = False
 
 # GASのURL
-GAS_URL = "https://script.google.com/macros/s/AKfycbxkUte1zosh9yiSYBlNzqHEbA_gDvt5gFfvl3cTauk3K5QJFAfUaS7nIgsXFHSKPS3WjQ/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbw2garctcHsJyXlxy3j_uN-ltNZeHsz1KUTzmrxIDMPkplvogvaqBVVhyV7i1PSYbmf/exec"
 
 # ランキングデータ保持用変数
 ranking_data = []
@@ -484,7 +484,7 @@ class Game:
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
         # ロード------
         load_data = window.localStorage.getItem("user_name")
-        
+        self.high_score = int(load_data) if load_data else 0
         #-------------
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
@@ -503,7 +503,6 @@ class Game:
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
-        self. high_score=load_data
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
     def update(self):
         """更新処理"""
@@ -795,11 +794,13 @@ class Game:
         self.draw_text(W/2,H/2+10,(f"HIGH SCORE:{self.high_score}"),14)
     def result_call(self):
         self.screen_status="result" ; pyxel.play(*sound_list["game_over"])
+        #サーバーへ
+        if self.score==self.high_score:send_score_to_sheet(player_name="user_name", score=self.high_score)
         #-----セーブ-----
         save_data = self.high_score
         window.localStorage.setItem("user_name", save_data)
-        #------サーバーへ送信------
-        send_score_to_sheet(player_name="user_name", score=self.score)
+        #---------------
+
 
     def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
         pyxel.text (x-2*len(text) , y-3, text , col )
