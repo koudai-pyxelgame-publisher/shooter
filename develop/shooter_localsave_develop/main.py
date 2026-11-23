@@ -410,6 +410,7 @@ class Game:
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
         # ロード------
         load_data = window.localStorage.getItem("user_name")
+        if load_data=JsNull:load_data=0
         #-------------
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
