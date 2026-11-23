@@ -18,7 +18,7 @@ except ImportError:
     IS_WEB = False
 
 # GASのURL
-GAS_URL = "https://script.google.com/macros/s/AKfycbw2garctcHsJyXlxy3j_uN-ltNZeHsz1KUTzmrxIDMPkplvogvaqBVVhyV7i1PSYbmf/exec"
+GAS_URL = "https://script.google.com/macros/s/AKfycbxkUte1zosh9yiSYBlNzqHEbA_gDvt5gFfvl3cTauk3K5QJFAfUaS7nIgsXFHSKPS3WjQ/exec"
 
 # ランキングデータ保持用変数
 ranking_data = []

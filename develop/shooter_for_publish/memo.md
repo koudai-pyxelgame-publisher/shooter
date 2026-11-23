@@ -1,4 +1,6 @@
 このファイル内でapiとセーブを実装、直接アプリ化してリリースすること。
+https://script.google.com/macros/s/AKfycbxkUte1zosh9yiSYBlNzqHEbA_gDvt5gFfvl3cTauk3K5QJFAfUaS7nIgsXFHSKPS3WjQ/exec
+
 
 cd C:\Users\kodai\OneDrive\ドキュメント\shooter\develop
 pyxel package shooter_for_publish shooter_for_publish\main.py
