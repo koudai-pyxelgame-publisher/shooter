@@ -799,7 +799,7 @@ class Game:
         self.screen_status="result"
         #サーバーへ送信後セーブ
         #サーバーへ
-        if self.score==self.high_score:send_score_to_sheet(player_name="user_name", score=self.high_score)
+        send_score_to_sheet(player_name="user_name", score=self.score)
         #-----セーブ-----
         save_data = self.high_score
         window.localStorage.setItem("user_name", save_data)
