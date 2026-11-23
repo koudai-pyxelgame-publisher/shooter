@@ -425,7 +425,7 @@ class Game:
         self.start_menu_call()
         self.hit_frame=game_frame_count
         self.score=0
-        self. high_score=0
+        self. high_score=0#ロード時に削除
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
     def update(self):
         """更新処理"""
