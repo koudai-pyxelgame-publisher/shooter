@@ -13,41 +13,45 @@ fire_rate_up_time=200#発射速度アップ有効フレーム
 dash_freeze_frame=30#ダッシュ硬直フレーム
 dash_frame=5#ダッシュ継続フレーム
 bullet_speed=2
-enemy_max=10
 #敵の確率
 enemy_stage_level_list={
     "stage_0":{
-        "enemy_max":0,
+        "mob_enemy_max":0,
         "level_1":0,
         "level_2":0,
         "level_3":0
     },"stage_1":{
-        "enemy_max":10,
+        "mob_enemy_max":10,
         "level_1":100,
         "level_2":0,
         "level_3":0
     },"stage_2":{
-        "enemy_max":13,
+        "mob_enemy_max":13,
         "level_1":50,
         "level_2":50,
         "level_3":0
     },"stage_3":{
-        "enemy_max":13,
+        "mob_enemy_max":13,
         "level_1":0,
         "level_2":100,
         "level_3":0
     },"stage_4":{
-        "enemy_max":12,
+        "mob_enemy_max":12,
         "level_1":0,
         "level_2":50,
         "level_3":50
     },"stage_5":{
-        "enemy_max":15,
+        "mob_enemy_max":15,
         "level_1":20,
         "level_2":50,
         "level_3":30
-        }
-        }
+    },"stage_boss_1":{
+        "mob_enemy_max":0,
+        "level_1":0,
+        "level_2":0,
+        "level_3":0
+    }
+}
 #＃アイテムの出現確率リスト
 item_probability_list={
     "None":91,#何も出ない
@@ -68,12 +72,12 @@ character_particles={
     "plus":(0,8,16,8,8,0),
     "minus":(0,16,16,8,8,0),
 }
-enemy_cost_list={
+mob_enemy_cost_list={
     "level_1":(0,40,0,12,12,11),
     "level_2":(0,52,0,12,12,11),
     "level_3":(0,64,0,12,12,11)
             }
-enemy_w,enemy_h=12,12
+mob_enemy_w,mob_enemy_h=12,12
 items_cost={
     "healing":(0,48,16,8,8,0),
     "fire_rate_up":(0,56,16,8,8,0)
@@ -268,10 +272,10 @@ class player_sprite(base_sprite):
             self.x+=self.vx*2
             self.y+=self.vy*2
         
-class enemy(base_sprite):
+class mob_enemy(base_sprite):
     def __init__(self, x, y,life,level="level_1"):
         """コンストラクタ"""
-        super().__init__(x, y,enemy_w,enemy_h,life)#親クラスのコンストラクタ(座標二つ,幅と高さ)
+        super().__init__(x, y,mob_enemy_w,mob_enemy_h,life)#親クラスのコンストラクタ(座標二つ,幅と高さ)
         self.vx=0
         self.vy=0
         self.angle=0
@@ -286,7 +290,7 @@ class enemy(base_sprite):
         self.x+=self.vx;self.y+=self.vy
     def draw(self):
         """描画処理"""
-        pyxel.blt(self.x,self.y,*enemy_cost_list[self.cost])
+        pyxel.blt(self.x,self.y,*mob_enemy_cost_list[self.cost])
 
     def move_control(self):
         if self.cost=="level_1":
@@ -297,7 +301,7 @@ class enemy(base_sprite):
             self.level_3_move()
         else: self.level_0_move()
 
-    def enemy_control_base(self):#画面外防止
+    def mob_enemy_control_base(self):#画面外防止
         if 0>self.x+self.vx:self.vx=1#左に行きすぎたら強制的に右へ
         elif self.x+self.vx > W:self.vx=-1#上の逆
         if 0 > self.y+self.vy:self.vy=1#上に行きすぎたら強制的に下へ
@@ -305,7 +309,7 @@ class enemy(base_sprite):
     def level_0_move(self):
         self.vx,self.vy=0,0
     def level_1_move(self):
-        self.enemy_control_base()
+        self.mob_enemy_control_base()
         if game_frame_count > self.a_frame+30:
             self.trandition=random.randint(0,1)
             if self.trandition == 0:
@@ -316,7 +320,7 @@ class enemy(base_sprite):
                 self.vy=random.uniform(-2,2)
             self.a_frame = game_frame_count
     def level_2_move(self):
-        self.enemy_control_base()
+        self.mob_enemy_control_base()
         if game_frame_count > self.a_frame+30:
             self.vx=random.uniform(-1.5,1.5)
             self.vy=random.uniform(-1.5,1.5)
@@ -408,7 +412,7 @@ class bullet_sprite(base_sprite):
        #画面内かどうか判定
        if not( (-10<self.x+self.w<W+10) and (-10<self.y<H+10) ):
            self.life=0
-       #elif (enemy.x < self.x < enemy.x+7) and (enemy.y < self.y < enemy.y+8):
+       #elif (mob_enemy.x < self.x < mob_enemy.x+7) and (mob_enemy.y < self.y < mob_enemy.y+8):
         #   self.life=0;self.bomb.append(bomb_particle(self.x,self.y,4))
        #else : self.life=1 
 
@@ -424,7 +428,7 @@ class Game:
         # ローカルロード------
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
-        self.enemy_list=[]#敵リスト
+        self.mob_enemy_list=[]#敵リスト
         self.snow_list = [#スノーパーティクルを50個生成
         snow_particle(random.randint(0, W), random.randint(0, H)) for _ in range(50)
         ]
@@ -472,10 +476,10 @@ class Game:
 
     def jadge_hit(self):
         """当たり判定"""
-        for e in self.enemy_list: 
+        for e in self.mob_enemy_list: 
             #敵と弾の当たり判定
             for b in self.bullets:
-                if (e.x <= b.x+1 and b.x < e.x+enemy_w) and (e.y < b.y < e.y+enemy_h):
+                if (e.x <= b.x+1 and b.x < e.x+mob_enemy_w) and (e.y < b.y < e.y+mob_enemy_h):
                     b.life += -1
                     e.life += -1
                     self.score+=1
@@ -509,9 +513,9 @@ class Game:
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
-        self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
+        self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.mob_enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
         #アイテム生成
-        for e in self.enemy_list :
+        for e in self.mob_enemy_list :
             if e.life <= 0:
                 prob = item_probability_list
                 p1 = prob["None"]
@@ -526,24 +530,24 @@ class Game:
                     self.items_list.extend([item_sprite("fire_rate_up",e.x,e.y)])
         
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
-        self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
+        self.mob_enemy_list[:] = [e for e in self.mob_enemy_list if e.life > 0]#敵生存判定
         self.items_list[:] = [i for i in self.items_list if i.life > 0]#アイテムの生存判定
         self.player_particles_list[:] = [p for p in self.player_particles_list if p.life > 0]
-        while len(self.enemy_list) > enemy_stage_level_list[self.now_stage]["enemy_max"]:#敵が多すぎたら削除
-             self.enemy_list.pop(0) 
-        while len(self.enemy_list) < enemy_stage_level_list[self.now_stage]["enemy_max"]:
+        while len(self.mob_enemy_list) > enemy_stage_level_list[self.now_stage]["mob_enemy_max"]:#敵が多すぎたら削除
+             self.mob_enemy_list.pop(0) 
+        while len(self.mob_enemy_list) < enemy_stage_level_list[self.now_stage]["mob_enemy_max"]:
             # 現在のステージの確率データを取得する
             prob = enemy_stage_level_list[self.now_stage]
             p1 = prob["level_1"]
             p2 = p1 + prob["level_2"]
             p3 = p2 + prob["level_3"]
-            self.enemy_probability = random.randint(1, 100)
-            if 0 < self.enemy_probability <= p1:
-                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_1"))
-            elif p1 < self.enemy_probability <= p2:
-                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_2"))
-            elif p2 < self.enemy_probability <= p3:
-                self.enemy_list.append(enemy(random.randint(0, W), H/4, 1, "level_3"))
+            self.mob_enemy_probability = random.randint(1, 100)
+            if 0 < self.mob_enemy_probability <= p1:
+                self.mob_enemy_list.append(mob_enemy(random.randint(0, W), H/4, 1, "level_1"))
+            elif p1 < self.mob_enemy_probability <= p2:
+                self.mob_enemy_list.append(mob_enemy(random.randint(0, W), H/4, 1, "level_2"))
+            elif p2 < self.mob_enemy_probability <= p3:
+                self.mob_enemy_list.append(mob_enemy(random.randint(0, W), H/4, 1, "level_3"))
     def player_create(self):
         self.player=player_sprite(W/2,100,speed=player_speed,bullet=self.bullets,bomb=self.bomb,life=hp_max)#プレイヤー生成
         self.score=0
@@ -554,7 +558,7 @@ class Game:
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
-        for e in self.enemy_list: e.update()#敵更新処理
+        for e in self.mob_enemy_list: e.update()#敵更新処理
         
         if self.menu_selected_option == "play":self.menu_next_option="traning_mode"
         if self.menu_selected_option == "traning_mode":self.menu_next_option="online_ranking"
@@ -575,14 +579,14 @@ class Game:
                 #今は音鳴らすだけ
                 pyxel.play(*sound_list["not"])
                 #self.screen_status="ranking"
-                #enemy_stage_level_list[self.now_stage]["enemy_max"]=0
+                #mob_enemy_stage_level_list[self.now_stage]["mob_enemy_max"]=0
         if (pyxel.btnp(pyxel.KEY_RSHIFT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)):
             pyxel.play(*sound_list["select"])
             self.menu_selected_option=self.menu_next_option
     def start_menu_draw(self):#スタートメニューの描画処理
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
 
         pyxel.text(10,10,f"HIGH SCORE:{self.high_score}",14)
         self.draw_text(W/2,H/2-24,"SHOOTER",6)
@@ -604,7 +608,7 @@ class Game:
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
-        for e in self.enemy_list: e.update()#敵更新処理
+        for e in self.mob_enemy_list: e.update()#敵更新処理
         for i in self.items_list: i.update()#アイテムアップデート
         for p in self.player_particles_list: p.update()
         if  0 <= self.score < 50:self.now_stage="stage_1"
@@ -662,7 +666,7 @@ class Game:
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
         for i in self.items_list : i.draw()#アイテムの描画処理
         for h in self.heart_list : h.draw()
         for p in self.player_particles_list : p.draw()#パーティクル描画
@@ -710,7 +714,7 @@ class Game:
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
 
         self.play_draw()
     def traning_call(self):
@@ -723,12 +727,12 @@ class Game:
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
     def ranking_draw(self):#ランキングの描画処理
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
     def ranking_call(self):#ここでオンラインデータを読み込んだうえでランキングを呼び出す
         pass
     
@@ -736,7 +740,7 @@ class Game:
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
-        for e in self.enemy_list: e.update()#敵更新処理
+        for e in self.mob_enemy_list: e.update()#敵更新処理
 
         self.jadge_life()
         if pyxel.btnp(pyxel.KEY_RETURN) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_START) :
@@ -746,7 +750,7 @@ class Game:
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
-        for e in self.enemy_list : e.draw()#敵の描画処理
+        for e in self.mob_enemy_list : e.draw()#敵の描画処理
         self.draw_text(W/2,H/2-14,"GAME OVER",14)
         self.draw_text(W/2,H/2,f"SCORE:{self.score}",14)
         self.draw_text(W/2,H/2+10,(f"HIGH SCORE:{self.high_score}"),14)
