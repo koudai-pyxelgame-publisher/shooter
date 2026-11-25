@@ -8,7 +8,8 @@ W,H = 160,120#画面の幅、高さ
 game_frame_count=0
 player_speed=1
 invincible_frame=25#無敵フレーム
-fire_freeze_frame=6#発射硬直フレーム
+fire_rate_frame=6#発射硬直フレーム
+fire_rate_up_time=200#発射速度アップ有効フレーム
 dash_freeze_frame=30#ダッシュ硬直フレーム
 dash_frame=5#ダッシュ継続フレーム
 bullet_speed=2
@@ -41,6 +42,12 @@ enemy_probability_list={
         "level_3":30
         }
         }
+#＃アイテムの出現確率リスト
+item_probability_list={
+    "None":91,#何も出ない
+    "healing":5,#回復
+    "fire_rate_up":4#連射速度アップ
+}
 character_se_ch=1#ゲームの効果音のチャンネル番号
 system_sound_ch=0#システムサウンドのチャンネル番号
 player_animations={
@@ -63,7 +70,7 @@ enemy_cost_list={
 enemy_w,enemy_h=12,12
 items_cost={
     "healing":(0,48,16,8,8,0),
-    "freeze_up":(0,56,16,8,8,0)
+    "fire_rate_up":(0,56,16,8,8,0)
 }
 hp_cost_list={
     "empty" :(0,24,16,8,8,11),
@@ -188,7 +195,8 @@ class player_sprite(base_sprite):
         self.cost="normal"
         self.speed=speed
         self.bullets=bullet
-        self.fire_freeze_count=0
+        self.fire_rate_count=0
+        self.fire_rate=fire_rate_frame
         self.dash_freeze_count=0
         self.bomb=bomb
         #コスチューム用意
@@ -238,9 +246,9 @@ class player_sprite(base_sprite):
             #self.cost="normal"
     def fire_control(self):
         if (pyxel.btn(pyxel.KEY_SPACE) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_X)):#スペースキー
-            if (game_frame_count > fire_freeze_frame+self.fire_freeze_count):#前回発射から発射硬直以上
+            if (game_frame_count > self.fire_rate+self.fire_rate_count):#前回発射から発射硬直以上
                 self.bullets.append(bullet_sprite(self.x,self.y,2,6,cost=self.cost,speed=bullet_speed,bomb=self.bomb))
-                self.fire_freeze_count=game_frame_count
+                self.fire_rate_count=game_frame_count
     def dash_control(self):
         if pyxel.btn(pyxel.KEY_B) or pyxel.btn(pyxel.GAMEPAD1_BUTTON_A):
             if (game_frame_count > dash_freeze_frame+self.dash_freeze_count):#ダッシュ
@@ -418,6 +426,7 @@ class Game:
         snow_particle(random.randint(0, W), random.randint(0, H)) for _ in range(50)
         ]
         self.items_list=[]#アイテムリスト
+        self.fire_rate_up_time=0
         self.heart_list=[]
         self.player_particles_list=[]#パーティクルリスト
         self.heart_del_frame=0
@@ -488,13 +497,30 @@ class Game:
                     self.player_particles_list.extend([character_particle("plus",self.player)])
                     if self.player.life < extra_hp_max : self.player.life+=1
                     self.heart_del_frame = game_frame_count
+                elif i.name=="fire_rate_up":
+                    pyxel.play(*sound_list["healing_get"])
+                    self.player_particles_list.extend([character_particle("plus",self.player)])
+                    self.player.fire_rate=3
+                    self.fire_rate_up_time=game_frame_count#連射速度アップ時間に今の時間を代入
+
     def jadge_life(self):#弾の削除、爆発パーティクル、敵とアイテムの生成、削除
         """生存判定"""
         self.bullets[:] = [b for b in self.bullets if b.life > 0]#bulletsの中身を全部一つずつ取り出してlifeが1のインスタンスを抽出して入れ直す
         self.bomb.extend([bomb_particle(e.x,e.y,6) for e in self.enemy_list if e.life <= 0]) #敵のHPがゼロになった時爆発パーティクル追加
         #アイテム生成
-        self.item_probability=random.randint(1,100)
-        self.items_list.extend([item_sprite("healing",e.x,e.y) for e in self.enemy_list if e.life <= 0 and self.item_probability<=healing_probability]) 
+        for e in self.enemy_list :
+            if e.life <= 0:
+                prob = item_probability_list
+                p1 = prob["None"]
+                p2 = p1 + prob["healing"]
+                p3 = p2 + prob["fire_rate_up"]
+                self.item_probability=random.randint(1,100)
+                if 0 < self.item_probability <= p1:
+                    pass
+                elif p1 < self.item_probability <= p2 :
+                    self.items_list.extend([item_sprite("healing",e.x,e.y)]) 
+                elif p2 < self.item_probability  <= p3 :
+                    self.items_list.extend([item_sprite("fire_rate_up",e.x,e.y)])
         
         self.bomb[:] = [b for b in self.bomb if b.life > 0]#爆発パーティクル生存判定
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
@@ -605,7 +631,12 @@ class Game:
                     self.heart_list[-1].cost="empty"
                     if 0 <= game_frame_count%60 <= 35 :
                         self.heart_list[-1].cost="extra"
-                    
+        #連射速度アップの終了判定
+        if self.player.fire_rate < fire_rate_frame and self.fire_rate_up_time+fire_rate_up_time < game_frame_count:
+            self.player_particles_list.extend([character_particle("minus",self.player)])
+            pyxel.play(*sound_list["del_extra"])
+            self.player.fire_rate=fire_rate_frame
+            
         #プレイヤーのアップデートと爆殺処理
         if self.player.life<=0:
             #lifeがゼロになったら爆殺してリザルト画面へ 
@@ -640,6 +671,7 @@ class Game:
     def play_call(self):
         self.screen_status = "play"
         self.heart_list=[heart_sprite(cost="normal") for _ in range(hp_max)]
+        self.items_list=[]
         self.player_create()
         self.enemy_max=enemy_max
 
