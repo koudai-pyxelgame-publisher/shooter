@@ -15,28 +15,34 @@ dash_frame=5#ダッシュ継続フレーム
 bullet_speed=2
 enemy_max=10
 #敵の確率
-enemy_probability_list={
-    "stage_1":{
+enemy_stage_level_list={
+    "stage_0":{
+        "enemy_max":0,
+        "level_1":0,
+        "level_2":0,
+        "level_3":0
+    },"stage_1":{
+        "enemy_max":10,
         "level_1":100,
         "level_2":0,
         "level_3":0
-        },
-    "stage_2":{
+    },"stage_2":{
+        "enemy_max":13,
         "level_1":50,
         "level_2":50,
         "level_3":0
-        },
-    "stage_3":{
+    },"stage_3":{
+        "enemy_max":13,
         "level_1":0,
         "level_2":100,
         "level_3":0
-        },
-    "stage_4":{
+    },"stage_4":{
+        "enemy_max":12,
         "level_1":0,
         "level_2":50,
         "level_3":50
-        },
-    "stage_5":{
+    },"stage_5":{
+        "enemy_max":15,
         "level_1":20,
         "level_2":50,
         "level_3":30
@@ -418,10 +424,7 @@ class Game:
         # ローカルロード------
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
-        self.enemy_list=[
-            enemy(random.randint(0,W),H/4,1)for _ in range(10)
-        ]#敵リスト
-        self.enemy_max = 0#敵の最大数を0にに設定
+        self.enemy_list=[]#敵リスト
         self.snow_list = [#スノーパーティクルを50個生成
         snow_particle(random.randint(0, W), random.randint(0, H)) for _ in range(50)
         ]
@@ -526,11 +529,11 @@ class Game:
         self.enemy_list[:] = [e for e in self.enemy_list if e.life > 0]#敵生存判定
         self.items_list[:] = [i for i in self.items_list if i.life > 0]#アイテムの生存判定
         self.player_particles_list[:] = [p for p in self.player_particles_list if p.life > 0]
-        while len(self.enemy_list) > self.enemy_max:#敵が多すぎたら削除
+        while len(self.enemy_list) > enemy_stage_level_list[self.now_stage]["enemy_max"]:#敵が多すぎたら削除
              self.enemy_list.pop(0) 
-        while len(self.enemy_list) < self.enemy_max:
+        while len(self.enemy_list) < enemy_stage_level_list[self.now_stage]["enemy_max"]:
             # 現在のステージの確率データを取得する
-            prob = enemy_probability_list[self.now_stage]
+            prob = enemy_stage_level_list[self.now_stage]
             p1 = prob["level_1"]
             p2 = p1 + prob["level_2"]
             p3 = p2 + prob["level_3"]
@@ -572,7 +575,7 @@ class Game:
                 #今は音鳴らすだけ
                 pyxel.play(*sound_list["not"])
                 #self.screen_status="ranking"
-                #self.enemy_max=0
+                #enemy_stage_level_list[self.now_stage]["enemy_max"]=0
         if (pyxel.btnp(pyxel.KEY_RSHIFT) or pyxel.btnp(pyxel.GAMEPAD1_BUTTON_BACK)):
             pyxel.play(*sound_list["select"])
             self.menu_selected_option=self.menu_next_option
@@ -593,7 +596,7 @@ class Game:
     def start_menu_call(self):
         self.screen_status = "start_menu"
         self.menu_selected_option="play"
-        self.enemy_max=0
+        self.now_stage="stage_0"
 
     def play_update(self):#プレイ画面の画面更新処理 パーティクル,弾,敵,プレイヤーの更新　ポーズ判定
         global game_frame_count
@@ -673,7 +676,6 @@ class Game:
         self.heart_list=[heart_sprite(cost="normal") for _ in range(hp_max)]
         self.items_list=[]
         self.player_create()
-        self.enemy_max=enemy_max
 
     def pose_update(self):#ポーズ画面の画面更新処理
         if self.menu_selected_option == "return":self.menu_next_option="escape"
@@ -712,11 +714,10 @@ class Game:
 
         self.play_draw()
     def traning_call(self):
-        self.enemy_max=0
+        self.now_stage="stage_0"
         self.items_list=[]
         self.screen_status = "traning"
         self.player_create()
-        self.enemy_max=0
 
     def ranking_update(self):#ランキングの画面更新処理
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
