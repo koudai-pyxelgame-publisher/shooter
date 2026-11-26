@@ -1,6 +1,71 @@
 import pyxel
 import math
 import random
+#----------googleapi & save----------
+import asyncio
+import json
+
+try:
+    from js import window
+    from pyodide.http import pyfetch
+    IS_WEB = True
+except ImportError:
+    IS_WEB = False
+
+GAS_URL = "https://script.google.com/macros/s/AKfycbxkUte1zosh9yiSYBlNzqHEbA_gDvt5gFfvl3cTauk3K5QJFAfUaS7nIgsXFHSKPS3WjQ/exec"
+
+# ランキング表示用リスト
+ranking_data = ["LOADING..."]
+
+# スコア送信（POST）の非同期本体
+async def _post_score_async(player_name, score):
+    try:
+        await pyfetch(
+            GAS_URL,
+            method="POST",
+            headers={"Content-Type": "text/plain"},
+            body=json.dumps({"name": player_name, "score": score}),
+        )
+    except Exception as e:
+        print("スコア送信エラー:", e)
+
+# 同期関数から呼び出すためのラッパー（既存の呼び出し方のまま使えます）
+def send_score_to_sheet(player_name="user_name", score=200):
+    if not IS_WEB:
+        print("ローカル環境のため送信をスキップしました:", player_name, score)
+        return
+    asyncio.create_task(_post_score_async(player_name, score))
+
+# ランキング取得（GET）
+async def fetch_ranking_from_sheet():
+    global ranking_data
+    ranking_data = ["LOADING..."]
+
+    if not IS_WEB:
+        ranking_data = [
+            "1. LOCAL_1 : 300",
+            "2. LOCAL_2 : 200",
+            "3. LOCAL_3 : 100",
+        ]
+        return
+    try:
+        res = await pyfetch(GAS_URL)
+        ranking_data = await res.json()
+    except Exception as e:
+        print("ランキング取得エラー:", e)
+        ranking_data = ["LOAD ERROR"]
+# ランキング取得のラッパー（PCとWebの両対応）
+def load_ranking():
+    global ranking_data
+    if not IS_WEB:
+        ranking_data = [
+            "1. LOCAL_1 : 300",
+            "2. LOCAL_2 : 200",
+            "3. LOCAL_3 : 100",
+        ]
+        return
+    asyncio.create_task(fetch_ranking_from_sheet())
+#-------------------------------------
 #----------ゲームの定数----------
 def get_input():#入力を返す
     deadzone=10000
@@ -439,7 +504,13 @@ class Game:
         pyxel.init(W,H,title="shooter")#リセット
         #width(幅),height(高さ),title(タイトルバーの名前),fps(フレームレート),quit_key(閉じるキー指定),display_scale(表示倍率),capture_scale(録画の画質),capture_sec(録画最大秒数)
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
-        # ローカルロード------
+        # ロード------
+        if IS_WEB:
+            load_data = window.localStorage.getItem("1.2.x")#""にバージョン名
+            self.high_score = int(load_data) if load_data else 0
+        else:
+            self.high_score = 0
+
         self.bullets=[]#弾リスト
         self.bomb=[]#爆発パーティクルリスト
         self.mob_enemy_list=[]#敵リスト
@@ -456,7 +527,6 @@ class Game:
         self.hit_frame=game_frame_count
         self.score=0
         self.survive_time=0
-        self. high_score=0#ロード時に削除
         pyxel.run(self.update,self.draw)#実行関数(デフォルト毎秒30回)
     def update(self):
         """更新処理"""
@@ -607,7 +677,7 @@ class Game:
         #選択されたものを色を変えて上書き
         if self.menu_selected_option == "play" : self.draw_text(W/2,H/2,"PLAY",8)
         if self.menu_selected_option =="traning_mode" :self.draw_text(W/2,H/2+12,"TRAINING MODE",8)
-        if self.menu_selected_option == "online_ranking" : self.draw_text(W/2,H/2+24,"RANMING",8)
+        if self.menu_selected_option == "online_ranking" : self.draw_text(W/2,H/2+24,"RANKING",8)
         #pyxel.text(W/2,H/2+10,"©koudai",14)
     def start_menu_call(self):
         self.screen_status = "start_menu"
@@ -639,11 +709,11 @@ class Game:
                 self.heart_del_frame = game_frame_count
         #ハートリストの更新
         self.heart_list=[
-            heart_sprite(x=5+i*9,y=5,cost="empty") for i in range(hp_max)
+            heart_sprite(x=5+i*9,y=4,cost="empty") for i in range(hp_max)
             ]+[
-            heart_sprite(x=5+i*9,y=5,cost="normal") for i in range( min(self.player.life,hp_max) )#min(x,y)は双方の値の小さいほうを返す
+            heart_sprite(x=5+i*9,y=4,cost="normal") for i in range( min(self.player.life,hp_max) )#min(x,y)は双方の値の小さいほうを返す
             ]+[
-            heart_sprite(x=5+hp_max*9+i*9,y=5,cost="extra")for i in range(self.player.life-hp_max)
+            heart_sprite(x=5+hp_max*9+i*9,y=4,cost="extra")for i in range(self.player.life-hp_max)
             ]
         #最後尾のハートの点滅
         if self.heart_list[-1].cost=="extra":
@@ -652,7 +722,7 @@ class Game:
                     self.heart_list[-1].cost="empty"
                     if 0 <= game_frame_count%60 <= 35 :
                         self.heart_list[-1].cost="extra"
-        #連射速度アップの終了判定(通常時よりも速度が速いかつ)
+        #連射速度アップの終了判定(通常時よりも速度が速いかつ強化開始フレーム+制限時間よりも現在フレームの方が大きいとき)
         if self.player.fire_rate < fire_rate_frame and self.fire_rate_up_time+fire_rate_up_time < game_frame_count:
             self.player_particles_list.append(character_particle("minus",self.player))
             pyxel.play(*sound_list["del_extra"])
@@ -682,15 +752,15 @@ class Game:
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
         for e in self.mob_enemy_list : e.draw()#敵の描画処理
         for i in self.items_list : i.draw()#アイテムの描画処理
-        for h in self.heart_list : h.draw()
+        for h in self.heart_list : h.draw()#ハート描画
         for p in self.player_particles_list : p.draw()#パーティクル描画
         self.player.draw()
-        pyxel.rectb(5 , 15 ,dash_freeze_frame , 8 , 10)
-        pyxel.rect(5 , 15 , dash_freeze_frame-(game_frame_count-self.player.dash_freeze_count) , 8 , 10)
-        pyxel.text(5,30,f"SCORE:{self.score}",14)
-        pyxel.text(5,38,f"HIGH SCORE:{self.high_score}",14,)
-        pyxel.text(W-4*len(f"SURVIVE TIME:{self.survive_time}"),5,f"SURVIVE TIME:{self.survive_time}",14)
-        pyxel.rect(5 , 48 , 1/4* ( fire_rate_up_time-(game_frame_count-self.fire_rate_up_time) ), 8 , 10)
+        pyxel.rectb(4 , 12 ,dash_freeze_frame , 8 , 10)#ダッシュゲージ(枠)
+        pyxel.rect(4 , 12 , dash_freeze_frame-(game_frame_count-self.player.dash_freeze_count) , 8 , 10)#ダッシュゲージ
+        pyxel.rect(4 , 22 , 1/4* ( fire_rate_up_time-(game_frame_count-self.fire_rate_up_time) ), 8 , 6)#連射速度アップゲージ
+        pyxel.text(4,32,f"SCORE:{self.score}",14)
+        pyxel.text(4,40,f"HIGH SCORE:{self.high_score}",14,)
+        pyxel.text(W-4*len(f"SURVIVE TIME:{self.survive_time}"),4,f"SURVIVE TIME:{self.survive_time}",14)
     def play_call(self):
         self.score=0
         self.survive_time=0
@@ -746,15 +816,29 @@ class Game:
         for b in self.bullets: b.update()#弾の更新処理
         for b in self.bomb:b.update()#爆発パーティクル更新処理
         for e in self.mob_enemy_list : e.draw()#敵の描画処理
+        self.jadge_life()
+        if "Start" in get_input():
+            pyxel.play(*sound_list["None"])
+            pyxel.play(*sound_list["decide"])
+            if self.menu_selected_option=="back":
+                # playにカーソルがあってスペースキーが押されたらプレイヤーを生成してプレイ状態(1)へ
+                self.start_menu_call()
     def ranking_draw(self):#ランキングの描画処理
         for s in self.snow_list: s.draw()##スノーパーティクルの描画処理
         for b in self.bullets: b.draw()#弾の描画処理
         for b in self.bomb: b.draw()#爆発パーティクルの描画処理
         for e in self.mob_enemy_list : e.draw()#敵の描画処理
+        self.draw_text(W/2,H/2-30,"ONLINE RANKING",9)
+        self.draw_text(W/2,H/2+36,"BACK",14)
+        #選択されたものを色を変えて上書き
+        if self.menu_selected_option == "back" : self.draw_text(W/2,H/2+36,"BACK",8)
+        for i, text in enumerate(ranking_data):#ランキングデータ描画
+            self.draw_text(W/2, 40 + i * 12, text, 7)
     def ranking_call(self):#ここでオンラインデータを読み込んだうえでランキングを呼び出す
+        self.menu_selected_option="back"
         self.screen_status="ranking"
         self.now_stage="stage_0"
-        
+        load_ranking()
     def result_update(self):#リザルトの画面更新処理
         for s in self.snow_list: s.update()#スノーパーティクルのアップデート処理
         for b in self.bullets: b.update()#弾の更新処理
@@ -776,6 +860,13 @@ class Game:
     def result_call(self):
         self.screen_status="result"
         #サーバーへ送信後セーブ
+        #サーバーへ
+        if self.score==self.high_score:send_score_to_sheet(player_name="", score=self.score)#""におなまえ
+        #-----セーブ-----
+        save_data = self.high_score
+        if IS_WEB:
+            window.localStorage.setItem("1.2.x",save_data)#""にバージョン名
+        #---------------
         pyxel.play(*sound_list["game_over"])
     def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
         pyxel.text (x-2*len(text) , y-3, text , col )

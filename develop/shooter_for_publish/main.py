@@ -506,7 +506,7 @@ class Game:
         pyxel.load("shooter_resource.pyxres")#ソースファイル読み込み
         # ロード------
         if IS_WEB:
-            load_data = window.localStorage.getItem("user_name")
+            load_data = window.localStorage.getItem("1.2.x")#""にバージョン名
             self.high_score = int(load_data) if load_data else 0
         else:
             self.high_score = 0
@@ -861,11 +861,11 @@ class Game:
         self.screen_status="result"
         #サーバーへ送信後セーブ
         #サーバーへ
-        if self.score==self.high_score:send_score_to_sheet(player_name="", score=self.high_score)#""におなまえ
+        if self.score==self.high_score:send_score_to_sheet(player_name="", score=self.score)#""におなまえ
         #-----セーブ-----
         save_data = self.high_score
         if IS_WEB:
-            window.localStorage.setItem("user_name", self.high_score)
+            window.localStorage.setItem("1.2.x",save_data)#""にバージョン名
         #---------------
         pyxel.play(*sound_list["game_over"])
     def draw_text(self,x=W/2,y=H/2,text="text",col=14):#真ん中でテキスト描画
