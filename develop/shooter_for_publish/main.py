@@ -777,7 +777,7 @@ class Game:
             pyxel.play(*sound_list["decide"])
             if self.menu_selected_option=="return":
                 # returnにカーソルがあってスペースキーが押されたらプレイ状態(1)へ
-                self.screen_status = "play"
+                self.screen_status = self.next_screen_status
             elif self.menu_selected_option=="escape":
                 # escapeにカーソルがあってスペースキーが押されたらメニューへ
                 self.start_menu_call()
@@ -792,6 +792,7 @@ class Game:
         if self.menu_selected_option == "return" : self.draw_text(W/2,H/2+12,"RETURN",8)
         if self.menu_selected_option =="escape" :self.draw_text(W/2,H/2+24,"ESCAPE",8)
     def pose_call(self):
+        self.next_screen_status=self.screen_status
         self.screen_status="pose"        
         self.menu_selected_option="return"
         self.menu_next_option="escape"
