@@ -833,8 +833,7 @@ class Game:
         #選択されたものを色を変えて上書き
         if self.menu_selected_option == "back" : self.draw_text(W/2,H/2+36,"BACK",8)
         for i, text in enumerate(ranking_data):#ランキングデータ描画
-            pyxel.text(W/2-36,40+i*12,text,7)
-            #self.draw_text(W/2, 40 + i * 12, text, 7)
+            self.draw_text(W/2, 40 + i * 12, text, 7)
     def ranking_call(self):#ここでオンラインデータを読み込んだうえでランキングを呼び出す
         self.menu_selected_option="back"
         self.screen_status="ranking"
@@ -862,7 +861,7 @@ class Game:
         self.screen_status="result"
         #サーバーへ送信後セーブ
         #サーバーへ
-        if self.score==self.high_score:send_score_to_sheet(player_name="", score=self.high_score)#""のところへプレイヤーの名前を入れる
+        if self.score==self.high_score:send_score_to_sheet(player_name="", score=self.high_score)#""におなまえ
         #-----セーブ-----
         save_data = self.high_score
         if IS_WEB:
