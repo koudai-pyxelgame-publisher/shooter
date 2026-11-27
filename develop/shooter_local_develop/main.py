@@ -174,6 +174,9 @@ mob_enemy_cost_list={
     "level_3":(0,64,0,12,12,11)
             }
 mob_enemy_w,mob_enemy_h=12,12
+boss_enemy_cost_list={
+    "boss_1":(0,0,0,24,16,0)
+}
 items_cost={
     "healing":(0,48,16,8,8,0),
     "fire_rate_up":(0,56,16,8,8,0)
@@ -764,6 +767,7 @@ class Game:
     def play_call(self):
         self.score=0
         self.survive_time=0
+        self.fire_rate_up_time=-200
         self.screen_status = "play"
         self.heart_list=[heart_sprite(cost="normal") for _ in range(hp_max)]
         self.items_list=[]
